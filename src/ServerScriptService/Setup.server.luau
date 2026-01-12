@@ -15,14 +15,7 @@ baseplate.CanCollide = false
 
 -- Function to setup player block count
 local function setupPlayerBlockCount(player)
-	local leaderstats = Instance.new("Folder")
-	leaderstats.Name = "leaderstats"
-	leaderstats.Parent = player
-
-	local blockCount = Instance.new("NumberValue")
-	blockCount.Name = "BlockCount"
-	blockCount.Value = 0
-	blockCount.Parent = leaderstats
+	player:SetAttribute("BlockCount", 0)
 end
 
 -- Function to handle block collection
@@ -43,14 +36,9 @@ local function onBlockTouched(block, hit)
 			-- Get the count from the block's attribute, default to 1
 			local count = block:GetAttribute("Count") or 1
 
-			-- Find the player's block count and increment it
-			local leaderstats = player:FindFirstChild("leaderstats")
-			if leaderstats then
-				local blockCount = leaderstats:FindFirstChild("BlockCount")
-				if blockCount then
-					blockCount.Value = blockCount.Value + count
-				end
-			end
+			-- Increment the player's block count attribute
+			local currentCount = player:GetAttribute("BlockCount") or 0
+			player:SetAttribute("BlockCount", currentCount + count)
 
 			-- Destroy the block
 			block:Destroy()
@@ -65,7 +53,6 @@ end
 
 -- Setup all existing blocks
 for _, block in ipairs(CollectionService:GetTagged("block")) do
-	print(`Setting up block: {block.Name}`)
 	block.Touched:Connect(function(hit)
 		onBlockTouched(block, hit)
 	end)
