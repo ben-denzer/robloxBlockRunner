@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
+local PhysicsService = game:GetService("PhysicsService")
 
 -- Track recently collected blocks to prevent double collection
 local recentlyCollected = {}
@@ -16,6 +17,16 @@ local respawnStorage = {}
 -- Function to setup player block count
 local function setupPlayerBlockCount(player)
 	player:SetAttribute("BlockCount", 0)
+end
+
+-- Function to set all parts in a character to Players collision group
+local function setCharacterCollisionGroup(character, groupName)
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CollisionGroup = groupName
+			part.CanTouch = true -- Ensure touch events can fire
+		end
+	end
 end
 
 -- Function to create a block from template
@@ -37,6 +48,16 @@ local function createBlockFromTemplate(template)
 
 	-- Add the "block" tag
 	CollectionService:AddTag(newBlock, "block")
+
+	-- Set properties in correct order for touch detection
+	-- Ensure CanCollide is true first (needed for touch detection)
+	if not newBlock.CanCollide then
+		newBlock.CanCollide = true
+	end
+	-- Ensure touch events can fire even though collision groups don't collide
+	newBlock.CanTouch = true
+	-- Assign block to Blocks collision group (after CanCollide/CanTouch)
+	newBlock.CollisionGroup = "Blocks"
 
 	return newBlock
 end
@@ -73,11 +94,15 @@ end
 
 -- Function to handle block collection
 local function onBlockTouched(block, hit)
+	-- Debug: Print when touch event fires
+	print("Block touched! Block:", block.Name, "Hit:", hit.Name, "Hit Parent:", hit.Parent)
+
 	-- Use block position as unique identifier for debounce (since block will be destroyed)
 	local blockKey = tostring(block.Position)
 
 	-- Check if this block was recently collected to prevent double collection
 	if recentlyCollected[blockKey] then
+		print("Block already collected (debounce)")
 		return
 	end
 
@@ -86,6 +111,7 @@ local function onBlockTouched(block, hit)
 	if character then
 		local player = Players:GetPlayerFromCharacter(character)
 		if player then
+			print("Player detected:", player.Name)
 			-- Mark this block as recently collected
 			recentlyCollected[blockKey] = true
 
@@ -164,8 +190,41 @@ end
 
 -- Initialize block system
 local function init()
+	-- Register collision groups FIRST (before setting any properties)
+	PhysicsService:RegisterCollisionGroup("Players")
+	PhysicsService:RegisterCollisionGroup("Blocks")
+
+	-- Set collision relationships
+	-- Players can pass through blocks (no physical collision)
+	PhysicsService:CollisionGroupSetCollidable("Players", "Blocks", false)
+	-- Note: Players and Blocks will still collide with Default (built-in) collision group
+	-- which includes all parts that haven't been assigned to a custom collision group
+	-- Touch events should fire regardless of collision groups when CanTouch = true
+
+	print("Collision groups set up. Players and Blocks are non-collidable.")
+
 	-- Setup all existing blocks
 	for _, block in ipairs(CollectionService:GetTagged("block")) do
+		-- Ensure CanCollide is true first (needed for touch detection)
+		if not block.CanCollide then
+			block.CanCollide = true
+		end
+		-- Ensure touch events can fire
+		block.CanTouch = true
+		-- Assign existing blocks to Blocks collision group (after CanCollide/CanTouch)
+		block.CollisionGroup = "Blocks"
+
+		print(
+			"Setting up block:",
+			block.Name,
+			"CanCollide:",
+			block.CanCollide,
+			"CanTouch:",
+			block.CanTouch,
+			"CollisionGroup:",
+			block.CollisionGroup
+		)
+
 		block.Touched:Connect(function(hit)
 			onBlockTouched(block, hit)
 		end)
@@ -173,18 +232,50 @@ local function init()
 
 	-- Listen for new blocks being tagged
 	CollectionService:GetInstanceAddedSignal("block"):Connect(function(block)
+		-- Ensure CanCollide is true first (needed for touch detection)
+		if not block.CanCollide then
+			block.CanCollide = true
+		end
+		-- Ensure touch events can fire
+		block.CanTouch = true
+		-- Assign new blocks to Blocks collision group (after CanCollide/CanTouch)
+		block.CollisionGroup = "Blocks"
+
+		print(
+			"New block tagged:",
+			block.Name,
+			"CanCollide:",
+			block.CanCollide,
+			"CanTouch:",
+			block.CanTouch,
+			"CollisionGroup:",
+			block.CollisionGroup
+		)
+
 		block.Touched:Connect(function(hit)
 			onBlockTouched(block, hit)
 		end)
 	end)
 
-	-- Setup block count for existing players
+	-- Setup block count and collision groups for existing players
 	for _, player in ipairs(Players:GetPlayers()) do
 		setupPlayerBlockCount(player)
+		if player.Character then
+			setCharacterCollisionGroup(player.Character, "Players")
+			print("Set collision group for existing player:", player.Name)
+		end
 	end
 
 	-- Listen for new players joining
-	Players.PlayerAdded:Connect(setupPlayerBlockCount)
+	Players.PlayerAdded:Connect(function(player)
+		setupPlayerBlockCount(player)
+		player.CharacterAdded:Connect(function(character)
+			-- Wait for HumanoidRootPart to ensure character is fully loaded
+			character:WaitForChild("HumanoidRootPart", 10)
+			setCharacterCollisionGroup(character, "Players")
+			print("Set collision group for new player:", player.Name)
+		end)
+	end)
 
 	-- Start periodic check for stored blocks every 60 seconds
 	task.spawn(function()
