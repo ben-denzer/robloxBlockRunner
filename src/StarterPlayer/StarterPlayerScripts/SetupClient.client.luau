@@ -1,5 +1,3 @@
-print("Hello world, from client!")
-
 -- Wait for the local player and PlayerGui to load
 local Players = game:GetService("Players")
 local workspace = game:GetService("Workspace")
