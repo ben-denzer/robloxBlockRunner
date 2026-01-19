@@ -19,14 +19,30 @@ local function setupPlayerBlockCount(player)
 	player:SetAttribute("BlockCount", 0)
 end
 
--- Function to set all parts in a character to Players collision group
-local function setCharacterCollisionGroup(character, groupName)
+-- Function to update a player's collision group based on their BlockCount
+local function updatePlayerCollisionGroup(player)
+	local character = player.Character
+	if not character then
+		return
+	end
+
+	local blockCount = player:GetAttribute("BlockCount") or 0
+	local collisionGroup = blockCount > 0 and "PlayersWithBlocks" or "PlayersWithoutBlocks"
+
 	for _, part in ipairs(character:GetDescendants()) do
 		if part:IsA("BasePart") then
-			part.CollisionGroup = groupName
+			part.CollisionGroup = collisionGroup
 			part.CanTouch = true -- Ensure touch events can fire
 		end
 	end
+end
+
+-- Function to set all parts in a character to the appropriate collision group
+local function setCharacterCollisionGroup(character, player)
+	if not player or not character then
+		return
+	end
+	updatePlayerCollisionGroup(player)
 end
 
 -- Function to create a block from template
@@ -124,7 +140,13 @@ local function onBlockTouched(block, hit)
 
 			-- Increment the player's block count attribute
 			local currentCount = player:GetAttribute("BlockCount") or 0
-			player:SetAttribute("BlockCount", currentCount + count)
+			local newCount = currentCount + count
+			player:SetAttribute("BlockCount", newCount)
+
+			-- Update collision group when BlockCount crosses 0 threshold
+			if (currentCount == 0 and newCount > 0) or (currentCount > 0 and newCount == 0) then
+				updatePlayerCollisionGroup(player)
+			end
 
 			-- Store template for respawning
 			local template = {
@@ -191,17 +213,26 @@ end
 -- Initialize block system
 local function init()
 	-- Register collision groups FIRST (before setting any properties)
-	PhysicsService:RegisterCollisionGroup("Players")
+	PhysicsService:RegisterCollisionGroup("PlayersWithBlocks")
+	PhysicsService:RegisterCollisionGroup("PlayersWithoutBlocks")
 	PhysicsService:RegisterCollisionGroup("Blocks")
+	PhysicsService:RegisterCollisionGroup("FakeFloor")
 
 	-- Set collision relationships
-	-- Players can pass through blocks (no physical collision)
-	PhysicsService:CollisionGroupSetCollidable("Players", "Blocks", false)
-	-- Note: Players and Blocks will still collide with Default (built-in) collision group
+	-- Players can pass through blocks (no physical collision) regardless of block count
+	PhysicsService:CollisionGroupSetCollidable("PlayersWithBlocks", "Blocks", false)
+	PhysicsService:CollisionGroupSetCollidable("PlayersWithoutBlocks", "Blocks", false)
+
+	-- Players with blocks CAN stand on fake-floor
+	PhysicsService:CollisionGroupSetCollidable("PlayersWithBlocks", "FakeFloor", true)
+	-- Players without blocks CANNOT stand on fake-floor (pass through)
+	PhysicsService:CollisionGroupSetCollidable("PlayersWithoutBlocks", "FakeFloor", false)
+
+	-- Note: All player groups will still collide with Default (built-in) collision group
 	-- which includes all parts that haven't been assigned to a custom collision group
 	-- Touch events should fire regardless of collision groups when CanTouch = true
 
-	print("Collision groups set up. Players and Blocks are non-collidable.")
+	print("Collision groups set up. PlayersWithBlocks can stand on FakeFloor.")
 
 	-- Setup all existing blocks
 	for _, block in ipairs(CollectionService:GetTagged("block")) do
@@ -261,7 +292,7 @@ local function init()
 	for _, player in ipairs(Players:GetPlayers()) do
 		setupPlayerBlockCount(player)
 		if player.Character then
-			setCharacterCollisionGroup(player.Character, "Players")
+			setCharacterCollisionGroup(player.Character, player)
 			print("Set collision group for existing player:", player.Name)
 		end
 	end
@@ -272,8 +303,37 @@ local function init()
 		player.CharacterAdded:Connect(function(character)
 			-- Wait for HumanoidRootPart to ensure character is fully loaded
 			character:WaitForChild("HumanoidRootPart", 10)
-			setCharacterCollisionGroup(character, "Players")
+			setCharacterCollisionGroup(character, player)
 			print("Set collision group for new player:", player.Name)
+		end)
+	end)
+
+	-- Setup fake-floor parts
+	for _, fakeFloorPart in ipairs(CollectionService:GetTagged("fake-floor")) do
+		if fakeFloorPart:IsA("BasePart") then
+			fakeFloorPart.CollisionGroup = "FakeFloor"
+			fakeFloorPart.CanCollide = true
+		end
+	end
+
+	-- Listen for new fake-floor parts
+	CollectionService:GetInstanceAddedSignal("fake-floor"):Connect(function(fakeFloorPart)
+		if fakeFloorPart:IsA("BasePart") then
+			fakeFloorPart.CollisionGroup = "FakeFloor"
+			fakeFloorPart.CanCollide = true
+		end
+	end)
+
+	-- Monitor BlockCount changes and update collision groups
+	for _, player in ipairs(Players:GetPlayers()) do
+		player:GetAttributeChangedSignal("BlockCount"):Connect(function()
+			updatePlayerCollisionGroup(player)
+		end)
+	end
+
+	Players.PlayerAdded:Connect(function(player)
+		player:GetAttributeChangedSignal("BlockCount"):Connect(function()
+			updatePlayerCollisionGroup(player)
 		end)
 	end)
 
