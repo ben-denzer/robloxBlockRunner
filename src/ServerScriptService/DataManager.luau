@@ -42,16 +42,23 @@ local function savePlayerData(player, data)
 
 	while not success and attempts < MAX_RETRIES do
 		attempts = attempts + 1
-		local success, errorMessage = pcall(function()
+		local s, errorMessage = pcall(function()
 			dataStore:SetAsync(userId, data)
 		end)
 
-		if success then
+		if s then
 			print("Successfully saved data for player " .. player.Name)
 			playerDataCache[userId] = table.clone(data)
 			playerDataCache[userId].LastSave = os.time()
 		else
-			warn("Failed to save data for player " .. player.Name .. " (attempt " .. attempts .. "): " .. tostring(errorMessage))
+			warn(
+				"Failed to save data for player "
+					.. player.Name
+					.. " (attempt "
+					.. attempts
+					.. "): "
+					.. tostring(errorMessage)
+			)
 			if attempts < MAX_RETRIES then
 				task.wait(RETRY_DELAY)
 			end
@@ -80,15 +87,22 @@ local function loadPlayerData(player)
 
 	while not success and attempts < MAX_RETRIES do
 		attempts = attempts + 1
-		local success, errorMessage = pcall(function()
+		local s, errorMessage = pcall(function()
 			data = dataStore:GetAsync(userId)
 		end)
 
-		if success then
+		if s then
 			print("Successfully loaded data for player " .. player.Name)
 			break
 		else
-			warn("Failed to load data for player " .. player.Name .. " (attempt " .. attempts .. "): " .. tostring(errorMessage))
+			warn(
+				"Failed to load data for player "
+					.. player.Name
+					.. " (attempt "
+					.. attempts
+					.. "): "
+					.. tostring(errorMessage)
+			)
 			if attempts < MAX_RETRIES then
 				task.wait(RETRY_DELAY)
 			end
@@ -203,7 +217,9 @@ local function init()
 		end)
 	end
 
-	print("DataManager initialized" .. (game:GetService("RunService"):IsStudio() and " (Studio mode - no saving)" or ""))
+	print(
+		"DataManager initialized" .. (game:GetService("RunService"):IsStudio() and " (Studio mode - no saving)" or "")
+	)
 end
 
 return {
