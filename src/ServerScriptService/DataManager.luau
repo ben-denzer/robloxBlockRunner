@@ -16,9 +16,6 @@ local dataStore = DataStoreService:GetDataStore(DATASTORE_NAME)
 -- Cache for player data (in-memory storage during session)
 local playerDataCache = {}
 
--- Queue for pending saves
-local saveQueue = {}
-
 -- Function to get default player data structure
 local function getDefaultPlayerData()
 	return {
@@ -129,14 +126,8 @@ local function updatePlayerData(player, key, value)
 	-- Update the player's attribute so client-side listeners work
 	player:SetAttribute(key, value)
 
-	-- Queue for saving
-	if not saveQueue[userId] then
-		saveQueue[userId] = true
-		task.delay(0, function()
-			savePlayerData(player, data)
-			saveQueue[userId] = nil
-		end)
-	end
+	-- Data will be saved during periodic saves, player leave, or server shutdown
+	-- No immediate save to avoid excessive database calls during rapid gameplay
 end
 
 -- Function to save all cached data (called on server shutdown or periodically)
