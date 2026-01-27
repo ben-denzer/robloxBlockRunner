@@ -20,6 +20,9 @@ local recentlyPlacedBlocks = {}
 local playerPlacementCooldowns = {}
 local PLACEMENT_COOLDOWN = 0 -- Seconds between block placements per player
 
+-- Track fake floor touch debounce per player
+local fakeFloorTouchDebounce = {}
+
 -- Function to check if a position is safe for block placement (no overlaps)
 local function isPositionSafeForBlock(position, blockSize)
 	-- Check for nearby stepping stones (prevent stacking)
@@ -56,6 +59,52 @@ local function isPositionSafeForBlock(position, blockSize)
 	end
 
 	return true
+end
+
+-- Function to find the closest safe position for block placement
+local function findClosestSafePosition(preferredPosition, blockSize)
+	-- First, try the preferred position
+	if isPositionSafeForBlock(preferredPosition, blockSize) then
+		return preferredPosition
+	end
+
+	-- Search in order of increasing distance for the closest safe position
+	local maxSearchDistance = 4 -- studs
+	local stepSize = 1
+
+	for distance = stepSize, maxSearchDistance, stepSize do
+		-- Check in a pattern: right, left, forward, back, then diagonals
+		local offsets = {
+			{ distance, 0 }, -- right
+			{ -distance, 0 }, -- left
+			{ 0, distance }, -- forward
+			{ 0, -distance }, -- back
+			{ distance, distance }, -- diagonal
+			{ distance, -distance }, -- diagonal
+			{ -distance, distance }, -- diagonal
+			{ -distance, -distance }, -- diagonal
+		}
+
+		-- Also check intermediate positions at this distance
+		for i = 1, 4 do
+			local intermediateDistance = distance * (i / 4)
+			table.insert(offsets, { intermediateDistance, 0 })
+			table.insert(offsets, { -intermediateDistance, 0 })
+			table.insert(offsets, { 0, intermediateDistance })
+			table.insert(offsets, { 0, -intermediateDistance })
+		end
+
+		for _, offset in ipairs(offsets) do
+			local testPosition =
+				Vector3.new(preferredPosition.X + offset[1], preferredPosition.Y, preferredPosition.Z + offset[2])
+
+			if isPositionSafeForBlock(testPosition, blockSize) then
+				return testPosition
+			end
+		end
+	end
+
+	return nil -- No safe position found
 end
 
 -- Function to check if a player can place a block at this position (spacing and cooldown check)
@@ -125,14 +174,27 @@ local function placeBlockUnderPlayer(player, fakeFloorPart)
 	-- Keep the block at the fake-floor height
 	local blockY = fakeFloorPart.Position.Y + 0.5
 
-	-- Always place block directly under the player's current position for reliability
-	-- This ensures players always get blocks when touching fake-floor
-	local isDirectPlacement = true
-	local blockPosition = Vector3.new(playerPos.X, blockY, playerPos.Z)
+	-- Get player's movement direction to place blocks in front when moving
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local preferredPos = Vector3.new(playerPos.X, blockY, playerPos.Z)
 
-	-- Check if position is safe (prevent overlaps with existing blocks/track)
-	if not isPositionSafeForBlock(blockPosition, blockSize) then
-		return
+	if humanoid and humanoid.MoveDirection.Magnitude > 0.1 then
+		-- Player is moving, place block in front of their movement direction
+		local moveDirection = humanoid.MoveDirection.Unit
+		local forwardOffset = 5 -- studs ahead in movement direction
+		preferredPos = Vector3.new(
+			playerPos.X + moveDirection.X * forwardOffset,
+			blockY,
+			playerPos.Z + moveDirection.Z * forwardOffset
+		)
+	end
+
+	-- Find the closest safe position for the block (prefer calculated position)
+	local isDirectPlacement = true
+	local blockPosition = findClosestSafePosition(preferredPos, blockSize)
+
+	if not blockPosition then
+		return -- No safe position found (should be very rare)
 	end
 
 	-- For direct placements on fake-floor, skip spacing checks but keep overlap protection
@@ -190,7 +252,13 @@ local function onFakeFloorTouched(fakeFloorPart, hit)
 	if character then
 		local player = Players:GetPlayerFromCharacter(character)
 		if player then
-			placeBlockUnderPlayer(player, fakeFloorPart)
+			-- Debounce: only allow every 200ms per player
+			local currentTime = tick()
+			local lastTouchTime = fakeFloorTouchDebounce[player.UserId]
+			if not lastTouchTime or (currentTime - lastTouchTime) >= 0.2 then
+				fakeFloorTouchDebounce[player.UserId] = currentTime
+				placeBlockUnderPlayer(player, fakeFloorPart)
+			end
 		end
 	end
 end
