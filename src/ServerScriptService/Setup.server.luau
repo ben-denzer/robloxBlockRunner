@@ -3,6 +3,10 @@
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 
+-- Initialize data persistence system
+local DataManager = require(game:GetService("ServerScriptService").DataManager)
+DataManager.init()
+
 -- Initialize block system
 local BlockSystem = require(game:GetService("ServerScriptService").Block)
 BlockSystem.init()

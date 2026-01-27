@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local PhysicsService = game:GetService("PhysicsService")
+local DataManager = require(game:GetService("ServerScriptService").DataManager)
 
 -- Track recently collected blocks to prevent double collection
 local recentlyCollected = {}
@@ -208,7 +209,7 @@ local function placeBlockUnderPlayer(player, fakeFloorPart)
 	-- Decrement the player's block count
 	local currentCount = player:GetAttribute("BlockCount") or 0
 	local newCount = math.max(0, currentCount - 1) -- Don't go below 0
-	player:SetAttribute("BlockCount", newCount)
+	DataManager.updatePlayerData(player, "BlockCount", newCount)
 
 	-- Clone and place the block
 	local newBlock = blockTemplate:Clone()
@@ -220,7 +221,7 @@ local function placeBlockUnderPlayer(player, fakeFloorPart)
 	CollectionService:AddTag(newBlock, "stepping-stone")
 
 	-- Schedule block destruction after 5 seconds
-	task.delay(5, function()
+	task.delay(3, function()
 		if newBlock and newBlock.Parent then
 			newBlock:Destroy()
 		end
@@ -263,10 +264,6 @@ local function onFakeFloorTouched(fakeFloorPart, hit)
 	end
 end
 
--- Function to setup player block count
-local function setupPlayerBlockCount(player)
-	player:SetAttribute("BlockCount", 0)
-end
 
 -- Function to update a player's collision group based on their BlockCount
 local function updatePlayerCollisionGroup(player)
@@ -385,7 +382,7 @@ local function onBlockTouched(block, hit)
 			-- Increment the player's block count attribute
 			local currentCount = player:GetAttribute("BlockCount") or 0
 			local newCount = currentCount + count
-			player:SetAttribute("BlockCount", newCount)
+			DataManager.updatePlayerData(player, "BlockCount", newCount)
 
 			-- Update collision group when BlockCount crosses 0 threshold
 			if (currentCount == 0 and newCount > 0) or (currentCount > 0 and newCount == 0) then
@@ -501,9 +498,8 @@ local function init()
 		end)
 	end)
 
-	-- Setup block count and collision groups for existing players
+	-- Setup collision groups for existing players
 	for _, player in ipairs(Players:GetPlayers()) do
-		setupPlayerBlockCount(player)
 		if player.Character then
 			setCharacterCollisionGroup(player.Character, player)
 		end
@@ -511,7 +507,6 @@ local function init()
 
 	-- Listen for new players joining
 	Players.PlayerAdded:Connect(function(player)
-		setupPlayerBlockCount(player)
 		player.CharacterAdded:Connect(function(character)
 			-- Wait for HumanoidRootPart to ensure character is fully loaded
 			character:WaitForChild("HumanoidRootPart", 10)
@@ -572,5 +567,4 @@ end
 
 return {
 	init = init,
-	setupPlayerBlockCount = setupPlayerBlockCount,
 }

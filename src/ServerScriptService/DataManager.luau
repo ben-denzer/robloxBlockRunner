@@ -1,0 +1,225 @@
+-- Data persistence system for player data
+-- Designed to be modular and extensible for future data types
+
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+
+-- Configuration
+local DATASTORE_NAME = "PlayerData"
+local SAVE_INTERVAL = 60 -- Save every 60 seconds for active players
+local MAX_RETRIES = 3
+local RETRY_DELAY = 1
+
+-- Data store instance
+local dataStore = DataStoreService:GetDataStore(DATASTORE_NAME)
+
+-- Cache for player data (in-memory storage during session)
+local playerDataCache = {}
+
+-- Queue for pending saves
+local saveQueue = {}
+
+-- Function to get default player data structure
+local function getDefaultPlayerData()
+	return {
+		BlockCount = 0,
+		-- Add other persistent data fields here as needed
+		LastSave = os.time(),
+	}
+end
+
+-- Function to safely save player data with retries
+local function savePlayerData(player, data)
+	local userId = tostring(player.UserId)
+
+	-- Skip DataStore access entirely in Studio
+	if game:GetService("RunService"):IsStudio() then
+		print("Studio detected - simulating successful save for player " .. player.Name)
+		playerDataCache[userId] = table.clone(data)
+		playerDataCache[userId].LastSave = os.time()
+		return true
+	end
+
+	local success = false
+	local attempts = 0
+
+	while not success and attempts < MAX_RETRIES do
+		attempts = attempts + 1
+		local success, errorMessage = pcall(function()
+			dataStore:SetAsync(userId, data)
+		end)
+
+		if success then
+			print("Successfully saved data for player " .. player.Name)
+			playerDataCache[userId] = table.clone(data)
+			playerDataCache[userId].LastSave = os.time()
+		else
+			warn("Failed to save data for player " .. player.Name .. " (attempt " .. attempts .. "): " .. tostring(errorMessage))
+			if attempts < MAX_RETRIES then
+				task.wait(RETRY_DELAY)
+			end
+		end
+	end
+
+	return success
+end
+
+-- Function to safely load player data with retries
+local function loadPlayerData(player)
+	local userId = tostring(player.UserId)
+
+	-- Skip DataStore access entirely in Studio
+	if game:GetService("RunService"):IsStudio() then
+		local data = getDefaultPlayerData()
+		print("Studio detected - using default data for player " .. player.Name)
+		playerDataCache[userId] = table.clone(data)
+		playerDataCache[userId].LastSave = os.time()
+		return data
+	end
+
+	local success = false
+	local data = nil
+	local attempts = 0
+
+	while not success and attempts < MAX_RETRIES do
+		attempts = attempts + 1
+		local success, errorMessage = pcall(function()
+			data = dataStore:GetAsync(userId)
+		end)
+
+		if success then
+			print("Successfully loaded data for player " .. player.Name)
+			break
+		else
+			warn("Failed to load data for player " .. player.Name .. " (attempt " .. attempts .. "): " .. tostring(errorMessage))
+			if attempts < MAX_RETRIES then
+				task.wait(RETRY_DELAY)
+			end
+		end
+	end
+
+	-- If loading failed or no data exists, use defaults
+	if not success or not data then
+		data = getDefaultPlayerData()
+		print("Using default data for player " .. player.Name)
+	end
+
+	-- Cache the loaded data
+	playerDataCache[userId] = table.clone(data)
+	playerDataCache[userId].LastSave = os.time()
+
+	return data
+end
+
+-- Function to get player data (from cache if available)
+local function getPlayerData(player)
+	local userId = tostring(player.UserId)
+	return playerDataCache[userId] or loadPlayerData(player)
+end
+
+-- Function to update specific player data
+local function updatePlayerData(player, key, value)
+	local userId = tostring(player.UserId)
+	local data = getPlayerData(player)
+
+	-- Update the specific field
+	data[key] = value
+	playerDataCache[userId] = table.clone(data)
+
+	-- Update the player's attribute so client-side listeners work
+	player:SetAttribute(key, value)
+
+	-- Queue for saving
+	if not saveQueue[userId] then
+		saveQueue[userId] = true
+		task.delay(0, function()
+			savePlayerData(player, data)
+			saveQueue[userId] = nil
+		end)
+	end
+end
+
+-- Function to save all cached data (called on server shutdown or periodically)
+local function saveAllPlayerData()
+	-- Skip saving in Studio
+	if game:GetService("RunService"):IsStudio() then
+		print("Studio detected - skipping data save")
+		return
+	end
+
+	print("Saving all player data...")
+	for userId, data in pairs(playerDataCache) do
+		local player = Players:GetPlayerByUserId(tonumber(userId))
+		if player then
+			savePlayerData(player, data)
+		end
+	end
+	print("Finished saving all player data")
+end
+
+-- Function to handle player joining
+local function onPlayerAdded(player)
+	local data = loadPlayerData(player)
+
+	-- Set initial attributes from loaded data
+	for key, value in pairs(data) do
+		if key ~= "LastSave" then -- Don't set LastSave as an attribute
+			player:SetAttribute(key, value)
+		end
+	end
+
+	print("Loaded data for player " .. player.Name .. ": BlockCount = " .. tostring(data.BlockCount))
+end
+
+-- Function to handle player leaving
+local function onPlayerRemoving(player)
+	local userId = tostring(player.UserId)
+	local data = playerDataCache[userId]
+
+	if data then
+		-- Update data with current attribute values before saving
+		for key, _ in pairs(data) do
+			if key ~= "LastSave" then
+				data[key] = player:GetAttribute(key) or data[key]
+			end
+		end
+
+		savePlayerData(player, data)
+		playerDataCache[userId] = nil
+	end
+
+	print("Saved and cleaned up data for player " .. player.Name)
+end
+
+-- Function to initialize the data manager
+local function init()
+	-- Connect player events
+	Players.PlayerAdded:Connect(onPlayerAdded)
+	Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+	-- Periodic save for active players (skip in Studio)
+	if not game:GetService("RunService"):IsStudio() then
+		task.spawn(function()
+			while true do
+				task.wait(SAVE_INTERVAL)
+				saveAllPlayerData()
+			end
+		end)
+
+		-- Save on server shutdown
+		game:BindToClose(function()
+			saveAllPlayerData()
+		end)
+	end
+
+	print("DataManager initialized" .. (game:GetService("RunService"):IsStudio() and " (Studio mode - no saving)" or ""))
+end
+
+return {
+	init = init,
+	getPlayerData = getPlayerData,
+	updatePlayerData = updatePlayerData,
+	savePlayerData = savePlayerData,
+	loadPlayerData = loadPlayerData,
+	getDefaultPlayerData = getDefaultPlayerData,
+}
