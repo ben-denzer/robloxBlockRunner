@@ -14,6 +14,179 @@ local nextBlockId = 1
 -- Store blocks that failed to respawn due to players being in the way
 local respawnStorage = {}
 
+-- Track recently placed blocks to maintain spacing
+local recentlyPlacedBlocks = {}
+-- Track per-player placement cooldowns
+local playerPlacementCooldowns = {}
+local PLACEMENT_COOLDOWN = 0 -- Seconds between block placements per player
+
+-- Function to check if a position is safe for block placement (no overlaps)
+local function isPositionSafeForBlock(position, blockSize)
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
+
+	-- Check for overlapping blocks
+	local nearbyBlocks = CollectionService:GetTagged("block")
+	overlapParams.FilterDescendantsInstances = nearbyBlocks
+
+	local blockRegion = Region3.new(position - blockSize / 2, position + blockSize / 2)
+
+	local partsInBlock = workspace:GetPartBoundsInBox(blockRegion.CFrame, blockSize, overlapParams)
+	if #partsInBlock > 0 then
+		return false
+	end
+
+	-- Check for overlapping track parts
+	local nearbyTracks = CollectionService:GetTagged("track")
+	overlapParams.FilterDescendantsInstances = nearbyTracks
+
+	partsInBlock = workspace:GetPartBoundsInBox(blockRegion.CFrame, blockSize, overlapParams)
+	if #partsInBlock > 0 then
+		return false
+	end
+
+	return true
+end
+
+-- Function to check if a player can place a block at this position (spacing and cooldown check)
+local function canPlaceBlockAtPosition(player, position, blockSize)
+	local currentTime = tick()
+	local userId = player.UserId
+
+	-- Check player's personal cooldown
+	local lastPlacementTime = playerPlacementCooldowns[userId]
+	if lastPlacementTime and (currentTime - lastPlacementTime) < PLACEMENT_COOLDOWN then
+		return false -- Player is still on cooldown
+	end
+
+	-- Calculate minimum spacing: block width + 25% gap to prevent overlaps
+	local blockWidth = math.max(blockSize.X, blockSize.Z)
+	local minSpacing = blockWidth + (blockWidth * 0.25)
+
+	-- Check spacing from recently placed blocks
+	for _, placedData in pairs(recentlyPlacedBlocks) do
+		local distance = (position - placedData.position).Magnitude
+		if distance < minSpacing then
+			return false
+		end
+
+		-- Clean up old entries (older than 10 seconds)
+		if currentTime - placedData.timestamp > 10 then
+			recentlyPlacedBlocks[placedData.id] = nil
+		end
+	end
+
+	return true
+end
+
+-- Function to place a block underneath a player
+local function placeBlockUnderPlayer(player, fakeFloorPart)
+	local character = player.Character
+	if not character then
+		return
+	end
+
+	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+	if not humanoidRootPart then
+		return
+	end
+
+	local blockTemplate = workspace:FindFirstChild("BlockTemplate")
+	if not blockTemplate then
+		warn("BlockTemplate not found in Workspace")
+		return
+	end
+
+	-- Check if player has blocks to place
+	local currentBlockCount = player:GetAttribute("BlockCount") or 0
+	if currentBlockCount <= 0 then
+		return -- Player has no blocks to place
+	end
+
+	-- Calculate position in front of the player
+	local playerPos = humanoidRootPart.Position
+	local blockSize = blockTemplate.Size
+
+	-- Get player's movement direction from velocity
+	local velocity = humanoidRootPart.AssemblyLinearVelocity
+	local speed = velocity.Magnitude
+
+	-- Only place blocks if player is moving (avoid placing when standing still)
+	if speed < 1 then
+		return
+	end
+
+	-- Calculate direction of movement (normalized velocity)
+	local moveDirection = velocity.Unit
+
+	-- Place block 3-4 studs ahead of the player
+	local distanceAhead = 3.5
+	local blockPos2D = playerPos + (moveDirection * distanceAhead)
+	blockPos2D = Vector2.new(blockPos2D.X, blockPos2D.Z) -- Remove Y component for now
+
+	-- Keep the block at the fake-floor height
+	local blockY = fakeFloorPart.Position.Y + 0.5
+
+	local blockPosition = Vector3.new(blockPos2D.X, blockY, blockPos2D.Y)
+
+	-- Check if position is safe and spacing is good
+	if not isPositionSafeForBlock(blockPosition, blockSize) then
+		return
+	end
+
+	if not canPlaceBlockAtPosition(player, blockPosition, blockSize) then
+		return
+	end
+
+	-- Decrement the player's block count
+	local currentCount = player:GetAttribute("BlockCount") or 0
+	local newCount = math.max(0, currentCount - 1) -- Don't go below 0
+	player:SetAttribute("BlockCount", newCount)
+
+	-- Clone and place the block
+	local newBlock = blockTemplate:Clone()
+	newBlock.Position = blockPosition
+	newBlock.Anchored = true -- Make it anchored so it stays in place
+	newBlock.Parent = workspace
+
+	-- Schedule block destruction after 5 seconds
+	task.delay(5, function()
+		if newBlock and newBlock.Parent then
+			newBlock:Destroy()
+		end
+	end)
+
+	-- Set player's cooldown
+	playerPlacementCooldowns[player.UserId] = tick()
+
+	-- Add to recently placed blocks tracking
+	local placementId = tostring(blockPosition)
+	recentlyPlacedBlocks[placementId] = {
+		position = blockPosition,
+		timestamp = tick(),
+		id = placementId,
+	}
+
+	-- Clean up old entries periodically
+	for id, data in pairs(recentlyPlacedBlocks) do
+		if tick() - data.timestamp > 30 then -- Clean up entries older than 30 seconds
+			recentlyPlacedBlocks[id] = nil
+		end
+	end
+end
+
+-- Function to handle fake-floor touching
+local function onFakeFloorTouched(fakeFloorPart, hit)
+	-- Check if the hit part is part of a player's character
+	local character = hit:FindFirstAncestorOfClass("Model")
+	if character then
+		local player = Players:GetPlayerFromCharacter(character)
+		if player then
+			placeBlockUnderPlayer(player, fakeFloorPart)
+		end
+	end
+end
+
 -- Function to setup player block count
 local function setupPlayerBlockCount(player)
 	player:SetAttribute("BlockCount", 0)
@@ -270,11 +443,20 @@ local function init()
 		end)
 	end)
 
+	-- Clean up player cooldowns when players leave
+	Players.PlayerRemoving:Connect(function(player)
+		playerPlacementCooldowns[player.UserId] = nil
+	end)
+
 	-- Setup fake-floor parts
 	for _, fakeFloorPart in ipairs(CollectionService:GetTagged("fake-floor")) do
 		if fakeFloorPart:IsA("BasePart") then
 			fakeFloorPart.CollisionGroup = "FakeFloor"
 			fakeFloorPart.CanCollide = true
+			fakeFloorPart.CanTouch = true
+			fakeFloorPart.Touched:Connect(function(hit)
+				onFakeFloorTouched(fakeFloorPart, hit)
+			end)
 		end
 	end
 
@@ -283,6 +465,10 @@ local function init()
 		if fakeFloorPart:IsA("BasePart") then
 			fakeFloorPart.CollisionGroup = "FakeFloor"
 			fakeFloorPart.CanCollide = true
+			fakeFloorPart.CanTouch = true
+			fakeFloorPart.Touched:Connect(function(hit)
+				onFakeFloorTouched(fakeFloorPart, hit)
+			end)
 		end
 	end)
 
