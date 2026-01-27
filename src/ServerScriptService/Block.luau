@@ -22,34 +22,44 @@ local PLACEMENT_COOLDOWN = 0 -- Seconds between block placements per player
 
 -- Function to check if a position is safe for block placement (no overlaps)
 local function isPositionSafeForBlock(position, blockSize)
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Include
-
-	-- Check for overlapping blocks
-	local nearbyBlocks = CollectionService:GetTagged("block")
-	overlapParams.FilterDescendantsInstances = nearbyBlocks
-
-	local blockRegion = Region3.new(position - blockSize / 2, position + blockSize / 2)
-
-	local partsInBlock = workspace:GetPartBoundsInBox(blockRegion.CFrame, blockSize, overlapParams)
-	if #partsInBlock > 0 then
-		return false
+	-- Check for nearby stepping stones (prevent stacking)
+	local nearbySteppingStones = CollectionService:GetTagged("stepping-stone")
+	for _, existingStone in ipairs(nearbySteppingStones) do
+		local distance = (position - existingStone.Position).Magnitude
+		-- Ensure blocks don't overlap by keeping them at least their size apart
+		local minDistance = math.max(blockSize.X, blockSize.Y, blockSize.Z)
+		if distance < minDistance then
+			return false -- Too close to existing stepping stone
+		end
 	end
 
-	-- Check for overlapping track parts
+	-- Don't place on or near track parts - use precise AABB overlap detection
 	local nearbyTracks = CollectionService:GetTagged("track")
-	overlapParams.FilterDescendantsInstances = nearbyTracks
+	for _, trackPart in ipairs(nearbyTracks) do
+		-- Check if the block would overlap with the track using AABB (Axis-Aligned Bounding Box)
+		local trackMin = trackPart.Position - (trackPart.Size / 2)
+		local trackMax = trackPart.Position + (trackPart.Size / 2)
+		local blockMin = position - (blockSize / 2)
+		local blockMax = position + (blockSize / 2)
 
-	partsInBlock = workspace:GetPartBoundsInBox(blockRegion.CFrame, blockSize, overlapParams)
-	if #partsInBlock > 0 then
-		return false
+		-- AABB overlap test - check if boxes intersect in all 3 dimensions
+		if
+			blockMax.X > trackMin.X
+			and blockMin.X < trackMax.X
+			and blockMax.Y > trackMin.Y
+			and blockMin.Y < trackMax.Y
+			and blockMax.Z > trackMin.Z
+			and blockMin.Z < trackMax.Z
+		then
+			return false -- Block would overlap with track
+		end
 	end
 
 	return true
 end
 
 -- Function to check if a player can place a block at this position (spacing and cooldown check)
-local function canPlaceBlockAtPosition(player, position, blockSize)
+local function canPlaceBlockAtPosition(player, position, blockSize, isDirectPlacement)
 	local currentTime = tick()
 	local userId = player.UserId
 
@@ -57,6 +67,11 @@ local function canPlaceBlockAtPosition(player, position, blockSize)
 	local lastPlacementTime = playerPlacementCooldowns[userId]
 	if lastPlacementTime and (currentTime - lastPlacementTime) < PLACEMENT_COOLDOWN then
 		return false -- Player is still on cooldown
+	end
+
+	-- For direct placements (under falling players), skip spacing checks
+	if isDirectPlacement then
+		return true
 	end
 
 	-- Calculate minimum spacing: block width + 25% gap to prevent overlaps
@@ -103,39 +118,29 @@ local function placeBlockUnderPlayer(player, fakeFloorPart)
 		return -- Player has no blocks to place
 	end
 
-	-- Calculate position in front of the player
+	-- Calculate position for the block
 	local playerPos = humanoidRootPart.Position
 	local blockSize = blockTemplate.Size
-
-	-- Get player's movement direction from velocity
-	local velocity = humanoidRootPart.AssemblyLinearVelocity
-	local speed = velocity.Magnitude
-
-	-- Only place blocks if player is moving (avoid placing when standing still)
-	if speed < 1 then
-		return
-	end
-
-	-- Calculate direction of movement (normalized velocity)
-	local moveDirection = velocity.Unit
-
-	-- Place block 3-4 studs ahead of the player
-	local distanceAhead = 3.5
-	local blockPos2D = playerPos + (moveDirection * distanceAhead)
-	blockPos2D = Vector2.new(blockPos2D.X, blockPos2D.Z) -- Remove Y component for now
 
 	-- Keep the block at the fake-floor height
 	local blockY = fakeFloorPart.Position.Y + 0.5
 
-	local blockPosition = Vector3.new(blockPos2D.X, blockY, blockPos2D.Y)
+	-- Always place block directly under the player's current position for reliability
+	-- This ensures players always get blocks when touching fake-floor
+	local isDirectPlacement = true
+	local blockPosition = Vector3.new(playerPos.X, blockY, playerPos.Z)
 
-	-- Check if position is safe and spacing is good
+	-- Check if position is safe (prevent overlaps with existing blocks/track)
 	if not isPositionSafeForBlock(blockPosition, blockSize) then
 		return
 	end
 
-	if not canPlaceBlockAtPosition(player, blockPosition, blockSize) then
-		return
+	-- For direct placements on fake-floor, skip spacing checks but keep overlap protection
+	-- This ensures players get blocks when on fake-floor but prevents stacking on existing blocks
+	if not isDirectPlacement then
+		if not canPlaceBlockAtPosition(player, blockPosition, blockSize, isDirectPlacement) then
+			return
+		end
 	end
 
 	-- Decrement the player's block count
@@ -148,6 +153,9 @@ local function placeBlockUnderPlayer(player, fakeFloorPart)
 	newBlock.Position = blockPosition
 	newBlock.Anchored = true -- Make it anchored so it stays in place
 	newBlock.Parent = workspace
+
+	-- Tag as stepping stone (not "block" to avoid interfering with collectible blocks)
+	CollectionService:AddTag(newBlock, "stepping-stone")
 
 	-- Schedule block destruction after 5 seconds
 	task.delay(5, function()
