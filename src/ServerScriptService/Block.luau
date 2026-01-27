@@ -264,7 +264,6 @@ local function onFakeFloorTouched(fakeFloorPart, hit)
 	end
 end
 
-
 -- Function to update a player's collision group based on their BlockCount
 local function updatePlayerCollisionGroup(player)
 	local character = player.Character
@@ -306,6 +305,11 @@ local function createBlockFromTemplate(template)
 	-- Copy attributes
 	for attributeName, attributeValue in pairs(template.Attributes) do
 		newBlock:SetAttribute(attributeName, attributeValue)
+	end
+
+	-- Ensure Count attribute exists (default to 1 if missing)
+	if not newBlock:GetAttribute("Count") then
+		newBlock:SetAttribute("Count", 1)
 	end
 
 	-- Add the "block" tag
@@ -403,7 +407,7 @@ local function onBlockTouched(block, hit)
 			}
 
 			-- Store all attributes
-			for _, attributeName in ipairs(block:GetAttributes()) do
+			for attributeName, _ in pairs(block:GetAttributes()) do
 				template.Attributes[attributeName] = block:GetAttribute(attributeName)
 			end
 
@@ -477,6 +481,11 @@ local function init()
 		block.CanTouch = true
 		block.CollisionGroup = "Blocks"
 
+		-- Ensure Count attribute exists (default to 1 if missing)
+		if not block:GetAttribute("Count") then
+			block:SetAttribute("Count", 1)
+		end
+
 		block.Touched:Connect(function(hit)
 			onBlockTouched(block, hit)
 		end)
@@ -492,6 +501,11 @@ local function init()
 		block.CanTouch = true
 		-- Assign new blocks to Blocks collision group (after CanCollide/CanTouch)
 		block.CollisionGroup = "Blocks"
+
+		-- Ensure Count attribute exists (default to 1 if missing)
+		if not block:GetAttribute("Count") then
+			block:SetAttribute("Count", 1)
+		end
 
 		block.Touched:Connect(function(hit)
 			onBlockTouched(block, hit)
