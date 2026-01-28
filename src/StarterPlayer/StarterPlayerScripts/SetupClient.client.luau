@@ -1,6 +1,7 @@
 -- Wait for the local player and PlayerGui to load
 local Players = game:GetService("Players")
 local workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 -- Wait for the ScreenGui to load
@@ -73,3 +74,32 @@ end
 
 -- Connect the button's click event
 startButton.MouseButton1Click:Connect(onStartButtonClicked)
+
+-- Listen for store activation event
+-- Ensure the module is loaded first (creates the event)
+local RemoteEvents = require(ReplicatedStorage:WaitForChild("Hello"))
+-- Then get the event directly from ReplicatedStorage (same instance as server)
+local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
+
+openStoreEvent.OnClientEvent:Connect(function()
+
+	-- Debug: Check if StoreGui exists
+	local storeGui = playerGui:FindFirstChild("StoreGui")
+	if not storeGui then
+		warn("StoreGui not found in PlayerGui! Contents:", playerGui:GetChildren())
+		return
+	end
+
+	print("StoreGui found, enabling...")
+	storeGui.Enabled = true
+
+	-- Ensure BuyOrSell menu is visible (in case other menus were previously shown)
+	local buyOrSellMenu = storeGui:FindFirstChild("BuyOrSell")
+	if not buyOrSellMenu then
+		warn("BuyOrSell menu not found in StoreGui!")
+		return
+	end
+
+	buyOrSellMenu.Visible = true
+	print("Store opened successfully")
+end)

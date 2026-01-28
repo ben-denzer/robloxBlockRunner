@@ -11,6 +11,10 @@ DataManager.init()
 local BlockSystem = require(game:GetService("ServerScriptService").Block)
 BlockSystem.init()
 
+-- Initialize store system
+local StoreSystem = require(game:GetService("ServerScriptService").Store)
+StoreSystem.init()
+
 -- Wait for the baseplate to exist (in case it's loaded after this script)
 local baseplate = Workspace:WaitForChild("Baseplate")
 
