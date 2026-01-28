@@ -47,7 +47,6 @@ local function savePlayerData(player, data)
 		end)
 
 		if s then
-			print("Successfully saved data for player " .. player.Name)
 			playerDataCache[userId] = table.clone(data)
 			playerDataCache[userId].LastSave = os.time()
 		else
@@ -91,10 +90,7 @@ local function loadPlayerData(player)
 			data = dataStore:GetAsync(userId)
 		end)
 
-		if s then
-			print("Successfully loaded data for player " .. player.Name)
-			break
-		else
+		if not s then
 			warn(
 				"Failed to load data for player "
 					.. player.Name
@@ -112,7 +108,6 @@ local function loadPlayerData(player)
 	-- If loading failed or no data exists, use defaults
 	if not success or not data then
 		data = getDefaultPlayerData()
-		print("Using default data for player " .. player.Name)
 	end
 
 	-- Cache the loaded data
@@ -152,14 +147,12 @@ local function saveAllPlayerData()
 		return
 	end
 
-	print("Saving all player data...")
 	for userId, data in pairs(playerDataCache) do
 		local player = Players:GetPlayerByUserId(tonumber(userId))
 		if player then
 			savePlayerData(player, data)
 		end
 	end
-	print("Finished saving all player data")
 end
 
 -- Function to handle player joining
@@ -172,8 +165,6 @@ local function onPlayerAdded(player)
 			player:SetAttribute(key, value)
 		end
 	end
-
-	print("Loaded data for player " .. player.Name .. ": BlockCount = " .. tostring(data.BlockCount))
 end
 
 -- Function to handle player leaving
@@ -192,8 +183,6 @@ local function onPlayerRemoving(player)
 		savePlayerData(player, data)
 		playerDataCache[userId] = nil
 	end
-
-	print("Saved and cleaned up data for player " .. player.Name)
 end
 
 -- Function to initialize the data manager
@@ -217,9 +206,10 @@ local function init()
 		end)
 	end
 
-	print(
-		"DataManager initialized" .. (game:GetService("RunService"):IsStudio() and " (Studio mode - no saving)" or "")
-	)
+	if game:GetService("RunService"):IsStudio() then
+		print("Studio detected - skipping data save")
+		return
+	end
 end
 
 return {
