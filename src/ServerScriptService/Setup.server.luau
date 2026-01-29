@@ -11,6 +11,10 @@ DataManager.init()
 local BlockSystem = require(game:GetService("ServerScriptService").Block)
 BlockSystem.init()
 
+-- Initialize cash system
+local CashSystem = require(game:GetService("ServerScriptService").Cash)
+CashSystem.init()
+
 -- Initialize store system
 local StoreSystem = require(game:GetService("ServerScriptService").Store)
 StoreSystem.init()

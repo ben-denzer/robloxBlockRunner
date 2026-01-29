@@ -21,6 +21,7 @@ local playerDataCache = {}
 local function getDefaultPlayerData()
 	return {
 		BlockCount = 0,
+		Cash = 0,
 		WagonSize = Constants.DEFAULT_WAGON_SIZE,
 		-- Add other persistent data fields here as needed
 		LastSave = os.time(),
@@ -141,6 +142,22 @@ local function updatePlayerData(player, key, value)
 	-- No immediate save to avoid excessive database calls during rapid gameplay
 end
 
+-- Function to update player cash with immediate save to database
+local function updatePlayerCash(player, newCash)
+	local userId = tostring(player.UserId)
+	local data = getPlayerData(player)
+
+	-- Update the cash field
+	data.Cash = newCash
+	playerDataCache[userId] = table.clone(data)
+
+	-- Update the player's attribute so client-side listeners work
+	player:SetAttribute("Cash", newCash)
+
+	-- Save immediately to database (unlike other data which saves periodically)
+	savePlayerData(player, data)
+end
+
 -- Function to add blocks to player inventory with wagon capacity check
 -- Returns: success (boolean), newCount (number), blocksAdded (number)
 local function addBlocksToPlayer(player, count)
@@ -245,6 +262,7 @@ return {
 	init = init,
 	getPlayerData = getPlayerData,
 	updatePlayerData = updatePlayerData,
+	updatePlayerCash = updatePlayerCash,
 	addBlocksToPlayer = addBlocksToPlayer,
 	savePlayerData = savePlayerData,
 	loadPlayerData = loadPlayerData,
