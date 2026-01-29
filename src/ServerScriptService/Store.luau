@@ -8,6 +8,9 @@ require(ReplicatedStorage:WaitForChild("Hello"))
 local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
 local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
 
+-- Import DataManager for saving player data when store opens
+local DataManager = require(game:GetService("ServerScriptService").DataManager)
+
 -- Track which players can trigger the store (prevents spam after closing)
 local playerCooldowns = {}
 
@@ -25,6 +28,9 @@ local function onCashierTriggerTouched(_triggerPart, hit)
 
 			-- Set cooldown to prevent immediate reopening
 			playerCooldowns[player.UserId] = true
+
+			-- Save all player data to database before opening store
+			DataManager.savePlayerDataImmediately(player)
 
 			-- Fire the remote event to open the store on the client
 			openStoreEvent:FireClient(player)

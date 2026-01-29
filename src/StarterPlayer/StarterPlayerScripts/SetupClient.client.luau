@@ -6,7 +6,9 @@ local player = Players.LocalPlayer
 -- Wait for the ScreenGui to load
 local playerGui = player:WaitForChild("PlayerGui")
 local startMenuGui = playerGui:WaitForChild("StartMenuGui")
+local storeGui = playerGui:WaitForChild("StoreGui")
 startMenuGui.Enabled = true
+storeGui.Enabled = false
 
 local startMenu = startMenuGui:WaitForChild("StartMenu")
 local startButton = startMenu:WaitForChild("Start Button")

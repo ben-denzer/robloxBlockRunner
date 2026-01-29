@@ -185,6 +185,23 @@ local function addBlocksToPlayer(player, count)
 	return true, newCount, blocksToAdd
 end
 
+-- Function to save all data for a specific player immediately
+local function savePlayerDataImmediately(player)
+	local userId = tostring(player.UserId)
+	local data = playerDataCache[userId]
+
+	if data then
+		-- Update data with current attribute values before saving
+		for key, _ in pairs(data) do
+			if key ~= "LastSave" then
+				data[key] = player:GetAttribute(key) or data[key]
+			end
+		end
+
+		savePlayerData(player, data)
+	end
+end
+
 -- Function to save all cached data (called on server shutdown or periodically)
 local function saveAllPlayerData()
 	-- Skip saving in Studio
@@ -265,6 +282,7 @@ return {
 	updatePlayerCash = updatePlayerCash,
 	addBlocksToPlayer = addBlocksToPlayer,
 	savePlayerData = savePlayerData,
+	savePlayerDataImmediately = savePlayerDataImmediately,
 	loadPlayerData = loadPlayerData,
 	getDefaultPlayerData = getDefaultPlayerData,
 }
