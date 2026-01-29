@@ -20,7 +20,6 @@ local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
 
 -- Handle CloseButton click to disable StoreGui
 local function onCloseButtonClicked()
-	print("Close button clicked")
 	local storeGui = playerGui:FindFirstChild("StoreGui")
 	if storeGui then
 		storeGui.Enabled = false
@@ -115,7 +114,6 @@ openStoreEvent.OnClientEvent:Connect(function()
 			local closeButton = buyOrSellMenu:FindFirstChild("CloseButton")
 			if closeButton then
 				closeButton.MouseButton1Click:Connect(onCloseButtonClicked)
-				print("Close button connected")
 			else
 				print("Close button not found")
 			end
@@ -126,12 +124,10 @@ openStoreEvent.OnClientEvent:Connect(function()
 
 			if sellButton then
 				sellButton.MouseButton1Click:Connect(showSellFrame)
-				print("Sell button connected")
 			end
 
 			if shopButton then
 				shopButton.MouseButton1Click:Connect(showShopFrame)
-				print("Shop button connected")
 			end
 		end
 
@@ -141,7 +137,6 @@ openStoreEvent.OnClientEvent:Connect(function()
 			local backButton = sellFrame:FindFirstChild("BackButton")
 			if backButton then
 				backButton.MouseButton1Click:Connect(showBuyOrSellFrame)
-				print("Sell back button connected")
 			end
 		end
 
@@ -151,7 +146,6 @@ openStoreEvent.OnClientEvent:Connect(function()
 			local backButton = shopFrame:FindFirstChild("BackButton")
 			if backButton then
 				backButton.MouseButton1Click:Connect(showBuyOrSellFrame)
-				print("Shop back button connected")
 			end
 		end
 
