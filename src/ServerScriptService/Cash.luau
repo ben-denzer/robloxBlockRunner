@@ -97,6 +97,11 @@ local function onCashTouched(cashPart, hit)
 	if character then
 		local player = Players:GetPlayerFromCharacter(character)
 		if player then
+			-- Check if this cash has a no-respawn tag
+			if CollectionService:HasTag(cashPart, "no-respawn") then
+				return -- Don't store template or respawn no-respawn items
+			end
+
 			-- Mark this cash as recently collected
 			recentlyCollected[cashKey] = true
 
