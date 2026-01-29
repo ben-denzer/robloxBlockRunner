@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local PhysicsService = game:GetService("PhysicsService")
 local DataManager = require(game:GetService("ServerScriptService").DataManager)
+local Constants = require(game:GetService("ReplicatedStorage").Constants)
 
 -- Track recently collected blocks to prevent double collection
 local recentlyCollected = {}
@@ -383,10 +384,20 @@ local function onBlockTouched(block, hit)
 			-- Get the count from the block's attribute, default to 1
 			local count = block:GetAttribute("Count") or 1
 
-			-- Increment the player's block count attribute
-			local currentCount = player:GetAttribute("BlockCount") or 0
-			local newCount = currentCount + count
-			DataManager.updatePlayerData(player, "BlockCount", newCount)
+			-- Ensure count is positive (handle edge case of negative values gracefully)
+			if count <= 0 then
+				count = 1
+			end
+
+			-- Try to add blocks to player inventory with capacity check (allows partial collection)
+			local success, newCount, blocksAdded = DataManager.addBlocksToPlayer(player, count)
+			if not success then
+				-- Player cannot hold any of this block, remove from recently collected to allow retry
+				recentlyCollected[blockKey] = nil
+				return
+			end
+
+			local currentCount = newCount - blocksAdded -- Calculate what it was before adding
 
 			-- Update collision group when BlockCount crosses 0 threshold
 			if (currentCount == 0 and newCount > 0) or (currentCount > 0 and newCount == 0) then

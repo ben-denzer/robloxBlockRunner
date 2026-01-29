@@ -26,15 +26,17 @@ local function updateBlockCountDisplay()
 	local label = getBlockCountLabel()
 	if label then
 		local blockCount = player:GetAttribute("BlockCount") or 0
-		label.Text = tostring(blockCount)
+		label.Text = tostring(blockCount) .. " / " .. tostring(player:GetAttribute("WagonSize"))
 	end
 end
-
--- Initialize with current block count
+-- Initialize with current block count and wagon size
 updateBlockCountDisplay()
 
 -- Listen for BlockCount attribute changes
 player:GetAttributeChangedSignal("BlockCount"):Connect(updateBlockCountDisplay)
+
+-- Listen for WagonSize attribute changes
+player:GetAttributeChangedSignal("WagonSize"):Connect(updateBlockCountDisplay)
 
 -- Also update on character respawn (in case GUI gets reset)
 player.CharacterAdded:Connect(function()

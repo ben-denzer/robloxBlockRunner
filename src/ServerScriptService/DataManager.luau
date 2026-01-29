@@ -3,6 +3,7 @@
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
+local Constants = require(game:GetService("ReplicatedStorage").Constants)
 
 -- Configuration
 local DATASTORE_NAME = "PlayerData"
@@ -20,6 +21,7 @@ local playerDataCache = {}
 local function getDefaultPlayerData()
 	return {
 		BlockCount = 0,
+		WagonSize = Constants.DEFAULT_WAGON_SIZE,
 		-- Add other persistent data fields here as needed
 		LastSave = os.time(),
 	}
@@ -139,6 +141,33 @@ local function updatePlayerData(player, key, value)
 	-- No immediate save to avoid excessive database calls during rapid gameplay
 end
 
+-- Function to add blocks to player inventory with wagon capacity check
+-- Returns: success (boolean), newCount (number), blocksAdded (number)
+local function addBlocksToPlayer(player, count)
+	local userId = tostring(player.UserId)
+	local data = getPlayerData(player)
+
+	local currentCount = data.BlockCount or 0
+	local wagonSize = data.WagonSize or Constants.DEFAULT_WAGON_SIZE
+
+	-- Calculate how many blocks we can actually add without exceeding capacity
+	local availableSpace = wagonSize - currentCount
+	local blocksToAdd = math.min(count, availableSpace)
+
+	-- If no space available, return false
+	if blocksToAdd <= 0 then
+		return false, currentCount, 0
+	end
+
+	-- Update the block count with the actual amount that fits
+	local newCount = currentCount + blocksToAdd
+	data.BlockCount = newCount
+	playerDataCache[userId] = table.clone(data)
+	player:SetAttribute("BlockCount", newCount)
+
+	return true, newCount, blocksToAdd
+end
+
 -- Function to save all cached data (called on server shutdown or periodically)
 local function saveAllPlayerData()
 	-- Skip saving in Studio
@@ -216,6 +245,7 @@ return {
 	init = init,
 	getPlayerData = getPlayerData,
 	updatePlayerData = updatePlayerData,
+	addBlocksToPlayer = addBlocksToPlayer,
 	savePlayerData = savePlayerData,
 	loadPlayerData = loadPlayerData,
 	getDefaultPlayerData = getDefaultPlayerData,
