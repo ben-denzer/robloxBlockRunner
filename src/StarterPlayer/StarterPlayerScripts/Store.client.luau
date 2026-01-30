@@ -20,6 +20,10 @@ local sellTabsInitialized = false
 local SELECTED_COLOR = Color3.fromRGB(200, 200, 200)
 local UNSELECTED_COLOR = Color3.fromRGB(240, 240, 240)
 
+-- Transparency values for disabled buttons
+local DISABLED_TRANSPARENCY = 0.7
+local ENABLED_TRANSPARENCY = 0
+
 -- Ensure the module is loaded first (creates the event)
 require(ReplicatedStorage:WaitForChild("Hello"))
 -- Then get the event directly from ReplicatedStorage (same instance as server)
@@ -76,6 +80,139 @@ local function loadTabSelection()
 	return TAB_BLOCKS -- Default to blocks if no saved selection
 end
 
+-- Function to update sell button states based on player's block count
+local function updateSellButtonStates()
+	local storeGui = playerGui:FindFirstChild("StoreGui")
+	if not storeGui then
+		return
+	end
+
+	local sellFrame = storeGui:FindFirstChild("Sell")
+	if not sellFrame then
+		return
+	end
+
+	local sellBlocksFrame = sellFrame:FindFirstChild("SellBlocksFrame")
+	if not sellBlocksFrame then
+		return
+	end
+
+	-- Get player's current block count
+	local playerBlockCount = player:GetAttribute("BlockCount") or 0
+
+	-- Find all buttons tagged "sell-blocks-button"
+	local sellButtons = {}
+	for _, child in ipairs(sellBlocksFrame:GetChildren()) do
+		if child:IsA("ImageButton") and child:HasTag("sell-blocks-button") then
+			table.insert(sellButtons, child)
+		end
+	end
+
+	-- Update each button's state
+	for _, button in ipairs(sellButtons) do
+		local blocksToTurnInValue = button:FindFirstChild("BlocksToTurnIn")
+		if blocksToTurnInValue and blocksToTurnInValue:IsA("NumberValue") then
+			local blocksRequired = blocksToTurnInValue.Value
+			local hasEnoughBlocks = playerBlockCount >= blocksRequired
+
+			-- Update visual state
+			local imageLabel = button:FindFirstChild("ImageLabel")
+			local blocksText = button:FindFirstChild("BlocksText")
+			local cashText = button:FindFirstChild("CashText")
+
+			local transparency = hasEnoughBlocks and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
+
+			if imageLabel then
+				imageLabel.ImageTransparency = transparency
+			end
+			if blocksText then
+				blocksText.TextTransparency = transparency
+			end
+			if cashText then
+				cashText.TextTransparency = transparency
+			end
+
+			-- Store the enabled state for click handling
+			button:SetAttribute("Enabled", hasEnoughBlocks)
+		end
+	end
+end
+
+-- Function to show error frame when disabled button is clicked
+local function showSellErrorFrame()
+	local storeGui = playerGui:FindFirstChild("StoreGui")
+	if not storeGui then
+		return
+	end
+
+	local errorFrame = storeGui:FindFirstChild("Error")
+	if not errorFrame then
+		return
+	end
+
+	local dynamicText = errorFrame:FindFirstChild("DynamicText")
+	if dynamicText then
+		dynamicText.Text = "You do not have enough blocks to complete this transaction"
+	end
+
+	-- Create or show modal backdrop to block all interaction
+	local sellFrame = storeGui:FindFirstChild("Sell")
+	if sellFrame then
+		local modalBackdrop = sellFrame:FindFirstChild("ModalBackdrop")
+		if not modalBackdrop then
+			-- Create modal backdrop (transparent TextButton that covers everything)
+			modalBackdrop = Instance.new("TextButton")
+			modalBackdrop.Name = "ModalBackdrop"
+			modalBackdrop.Size = UDim2.fromScale(1, 1)
+			modalBackdrop.Position = UDim2.fromScale(0, 0)
+			modalBackdrop.BackgroundTransparency = 1
+			modalBackdrop.Text = ""
+			modalBackdrop.ZIndex = 10 -- Above content, below error frame
+			modalBackdrop.Parent = sellFrame
+
+			-- Connect click to do nothing (absorbs clicks)
+			modalBackdrop.MouseButton1Click:Connect(function() end)
+		end
+		modalBackdrop.Visible = true
+	end
+
+	errorFrame.Visible = true
+end
+
+-- Function to hide error frame
+local function hideSellErrorFrame()
+	local storeGui = playerGui:FindFirstChild("StoreGui")
+	if not storeGui then
+		return
+	end
+
+	local errorFrame = storeGui:FindFirstChild("Error")
+	if errorFrame then
+		errorFrame.Visible = false
+
+		-- Hide modal backdrop to restore interaction
+		local sellFrame = storeGui:FindFirstChild("Sell")
+		if sellFrame then
+			local modalBackdrop = sellFrame:FindFirstChild("ModalBackdrop")
+			if modalBackdrop then
+				modalBackdrop.Visible = false
+			end
+		end
+	end
+end
+
+-- Function to handle sell button clicks
+local function onSellButtonClicked(button)
+	local isEnabled = button:GetAttribute("Enabled")
+	if isEnabled then
+		-- Handle normal sell transaction (to be implemented)
+		print("Sell button clicked - transaction would happen here")
+	else
+		-- Show error frame for disabled button
+		showSellErrorFrame()
+	end
+end
+
 -- Function to switch to blocks tab
 local function switchToBlocksTab()
 	local storeGui = playerGui:FindFirstChild("StoreGui")
@@ -91,6 +228,8 @@ local function switchToBlocksTab()
 			-- Show/hide frames
 			if sellBlocksFrame then
 				sellBlocksFrame.Visible = true
+				-- Update button states when frame becomes visible
+				updateSellButtonStates()
 			end
 			if sellInventoryFrame then
 				sellInventoryFrame.Visible = false
@@ -292,8 +431,48 @@ openStoreEvent.OnClientEvent:Connect(function()
 			end
 		end
 
+		-- Connect sell button click events
+		local sellFrameLocal = storeGui:FindFirstChild("Sell")
+		if sellFrameLocal then
+			local sellBlocksFrame = sellFrameLocal:FindFirstChild("SellBlocksFrame")
+			if sellBlocksFrame then
+				-- Connect all sell buttons
+				for _, child in ipairs(sellBlocksFrame:GetChildren()) do
+					if child:IsA("ImageButton") and child:HasTag("sell-blocks-button") then
+						child.MouseButton1Click:Connect(function()
+							onSellButtonClicked(child)
+						end)
+					end
+				end
+			end
+		end
+
+		-- Connect error frame cancel button
+		local errorFrame = storeGui:FindFirstChild("Error")
+		if errorFrame then
+			local cancelButton = errorFrame:FindFirstChild("CancelButton")
+			if cancelButton then
+				cancelButton.MouseButton1Click:Connect(hideSellErrorFrame)
+			end
+		end
+
 		buttonsConnected = true
 	end
+
+	-- Connect to BlockCount attribute changes to update button states
+	player:GetAttributeChangedSignal("BlockCount"):Connect(function()
+		-- Only update if SellBlocksFrame is currently visible
+		local storeGuiLocal = playerGui:FindFirstChild("StoreGui")
+		if storeGuiLocal and storeGuiLocal.Enabled then
+			local sellFrame = storeGuiLocal:FindFirstChild("Sell")
+			if sellFrame then
+				local sellBlocksFrame = sellFrame:FindFirstChild("SellBlocksFrame")
+				if sellBlocksFrame and sellBlocksFrame.Visible then
+					updateSellButtonStates()
+				end
+			end
+		end
+	end)
 
 	-- Initialize sell tabs
 	initializeSellTabs()
