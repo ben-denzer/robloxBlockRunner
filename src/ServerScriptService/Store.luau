@@ -89,6 +89,7 @@ end
 
 -- Function to handle buying cart items
 local function onBuyCart(player, cartItemId)
+	print("onBuyCart", player, cartItemId)
 	if not player then
 		return false, "Player not found"
 	end

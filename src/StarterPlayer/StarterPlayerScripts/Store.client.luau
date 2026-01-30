@@ -140,8 +140,19 @@ local function updateSellButtonStates()
 	end
 end
 
+local function createModalBackdrop()
+	local modalBackdrop = Instance.new("TextButton")
+	modalBackdrop.Name = "ModalBackdrop"
+	modalBackdrop.Size = UDim2.fromScale(1, 1)
+	modalBackdrop.Position = UDim2.fromScale(0, 0)
+	modalBackdrop.BackgroundTransparency = 1
+	modalBackdrop.Text = ""
+	modalBackdrop.ZIndex = 10 -- Above content, below error frame
+	return modalBackdrop
+end
+
 -- Function to show error frame when disabled button is clicked
-local function showSellErrorFrame(errorMessage)
+local function showErrorFrame(errorMessage)
 	local storeGui = playerGui:FindFirstChild("StoreGui")
 	if not storeGui then
 		return
@@ -159,20 +170,19 @@ local function showSellErrorFrame(errorMessage)
 
 	-- Create or show modal backdrop to block all interaction
 	local sellFrame = storeGui:FindFirstChild("Sell")
-	if sellFrame then
-		local modalBackdrop = sellFrame:FindFirstChild("ModalBackdrop")
-		if not modalBackdrop then
-			-- Create modal backdrop (transparent TextButton that covers everything)
-			modalBackdrop = Instance.new("TextButton")
-			modalBackdrop.Name = "ModalBackdrop"
-			modalBackdrop.Size = UDim2.fromScale(1, 1)
-			modalBackdrop.Position = UDim2.fromScale(0, 0)
-			modalBackdrop.BackgroundTransparency = 1
-			modalBackdrop.Text = ""
-			modalBackdrop.ZIndex = 10 -- Above content, below error frame
-			modalBackdrop.Parent = sellFrame
+	local shopFrame = storeGui:FindFirstChild("Shop")
 
-			-- Connect click to do nothing (absorbs clicks)
+	if not sellFrame or not shopFrame then
+		return
+	end
+
+	local visibleFrame = sellFrame.Visible and sellFrame or shopFrame
+
+	if visibleFrame then
+		local modalBackdrop = visibleFrame:FindFirstChild("ModalBackdrop")
+		if not modalBackdrop then
+			modalBackdrop = createModalBackdrop()
+			modalBackdrop.Parent = visibleFrame
 			modalBackdrop.MouseButton1Click:Connect(function() end)
 		end
 		modalBackdrop.Visible = true
@@ -182,7 +192,7 @@ local function showSellErrorFrame(errorMessage)
 end
 
 -- Function to hide error frame
-local function hideSellErrorFrame()
+local function hideErrorFrame()
 	local storeGui = playerGui:FindFirstChild("StoreGui")
 	if not storeGui then
 		return
@@ -194,8 +204,16 @@ local function hideSellErrorFrame()
 
 		-- Hide modal backdrop to restore interaction
 		local sellFrame = storeGui:FindFirstChild("Sell")
+		local shopFrame = storeGui:FindFirstChild("Shop")
+
 		if sellFrame then
 			local modalBackdrop = sellFrame:FindFirstChild("ModalBackdrop")
+			if modalBackdrop then
+				modalBackdrop.Visible = false
+			end
+		end
+		if shopFrame then
+			local modalBackdrop = shopFrame:FindFirstChild("ModalBackdrop")
 			if modalBackdrop then
 				modalBackdrop.Visible = false
 			end
@@ -284,26 +302,6 @@ local function updateCartButtonStates()
 	end
 end
 
--- Function to show cart purchase error frame
-local function showCartErrorFrame(errorMessage)
-	local storeGui = playerGui:FindFirstChild("StoreGui")
-	if not storeGui then
-		return
-	end
-
-	local errorFrame = storeGui:FindFirstChild("Error")
-	if not errorFrame then
-		return
-	end
-
-	local dynamicText = errorFrame:FindFirstChild("DynamicText")
-	if dynamicText then
-		dynamicText.Text = errorMessage
-	end
-
-	errorFrame.Visible = true
-end
-
 -- Function to handle cart button clicks
 local function onCartButtonClicked(button)
 	local isEnabled = button:GetAttribute("Enabled")
@@ -319,10 +317,10 @@ local function onCartButtonClicked(button)
 			updateCartButtonStates()
 		else
 			-- Show error message from server
-			showCartErrorFrame(result or "Purchase failed")
+			showErrorFrame(result or "Purchase failed")
 		end
 	else
-		showCartErrorFrame("You cannot purchase this cart right now")
+		showErrorFrame("You cannot purchase this cart right now")
 	end
 end
 
@@ -341,11 +339,11 @@ local function onSellBlocksButtonClicked(button)
 			updateSellButtonStates()
 		else
 			-- Show error message from server
-			showSellErrorFrame(result1 or "Transaction failed")
+			showErrorFrame(result1 or "Transaction failed")
 		end
 	else
 		-- Show error frame for disabled button
-		showSellErrorFrame("You do not have enough blocks to complete this transaction")
+		showErrorFrame("You do not have enough blocks to complete this transaction")
 	end
 end
 
@@ -590,18 +588,18 @@ openStoreEvent.OnClientEvent:Connect(function()
 		if errorFrame then
 			local cancelButton = errorFrame:FindFirstChild("CancelButton")
 			if cancelButton then
-				cancelButton.MouseButton1Click:Connect(hideSellErrorFrame)
+				cancelButton.MouseButton1Click:Connect(hideErrorFrame)
 			end
 		end
 
 		-- Connect cart button click events
 		local shopFrameConnect = storeGui:FindFirstChild("Shop")
 		if shopFrameConnect then
-			local cartFrame = shopFrameConnect:FindFirstChild("CartFrame")
+			local cartFrame = shopFrameConnect:FindFirstChild("BuyCartsFrame")
 			if cartFrame then
 				-- Connect all cart buttons
 				for _, child in ipairs(cartFrame:GetChildren()) do
-					if child:IsA("ImageButton") and child:HasTag("cart-button") then
+					if child:IsA("ImageButton") and child:HasTag("buy-cart-button") then
 						child.MouseButton1Click:Connect(function()
 							onCartButtonClicked(child)
 						end)
