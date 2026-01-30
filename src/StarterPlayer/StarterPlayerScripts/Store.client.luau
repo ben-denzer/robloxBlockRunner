@@ -206,25 +206,11 @@ end
 local function onSellBlocksButtonClicked(button)
 	local isEnabled = button:GetAttribute("Enabled")
 	if isEnabled then
-		-- Get transaction details from button
-		local blocksToTurnInValue = button:FindFirstChild("BlocksToTurnIn")
-		local cashToReceiveValue = button:FindFirstChild("Payout")
-
-		if not blocksToTurnInValue or not blocksToTurnInValue:IsA("NumberValue") then
-			showSellErrorFrame("Invalid button configuration - missing blocks value")
-			return
-		end
-
-		if not cashToReceiveValue or not cashToReceiveValue:IsA("NumberValue") then
-			showSellErrorFrame("Invalid button configuration - missing cash value")
-			return
-		end
-
-		local blocksToSell = blocksToTurnInValue.Value
-		local totalCash = cashToReceiveValue.Value
+		-- Send button identifier to server (server will validate the transaction details)
+		local buttonIdentifier = button.Name
 
 		-- Call server to perform the transaction
-		local success, result1, _ = sellBlocksEvent:InvokeServer(blocksToSell, totalCash)
+		local success, result1, _ = sellBlocksEvent:InvokeServer(buttonIdentifier)
 
 		if success then
 			-- Transaction successful, update button states

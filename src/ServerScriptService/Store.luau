@@ -14,6 +14,16 @@ local DataManager = require(game:GetService("ServerScriptService").DataManager)
 -- Get the sell blocks event
 local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
 
+-- Configuration for valid sell transactions
+-- Key: button identifier (must match button.Name in the UI), Value: {blocksRequired, cashReward}
+-- IMPORTANT: Button names in the UI must exactly match these keys for transactions to work
+local SELL_BLOCKS_TRANSACTIONS = {
+	["Sell10BlocksButton"] = { blocks = 10, cash = 10000 },
+	["Sell50BlocksButton"] = { blocks = 50, cash = 75000 },
+	["Sell100BlocksButton"] = { blocks = 100, cash = 200000 },
+	-- Add more transactions as needed - ensure button names in UI match these keys
+}
+
 -- Track which players can trigger the store (prevents spam after closing)
 local playerCooldowns = {}
 
@@ -42,10 +52,19 @@ local function onCashierTriggerTouched(_triggerPart, hit)
 end
 
 -- Function to handle selling blocks
-local function onSellBlocks(player, blocksToSell, totalCash)
+local function onSellBlocks(player, buttonIdentifier)
 	if not player then
 		return false, "Player not found"
 	end
+
+	-- Look up the transaction details from our authoritative configuration
+	local transaction = SELL_BLOCKS_TRANSACTIONS[buttonIdentifier]
+	if not transaction then
+		return false, "Invalid transaction"
+	end
+
+	local blocksToSell = transaction.blocks
+	local totalCash = transaction.cash
 
 	-- Double-check that the player has enough blocks
 	local playerData = DataManager.getPlayerData(player)
