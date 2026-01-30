@@ -7,6 +7,9 @@ local Utils = require(ReplicatedStorage:WaitForChild("Utils"))
 -- Store the original walk speed when the store opens
 local originalWalkSpeed = 16 -- Default Roblox walk speed
 
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local UI_ELEMENTS = Constants.UI_ELEMENTS
+
 -- Track if buttons have been connected
 local buttonsConnected = false
 
@@ -34,7 +37,7 @@ local buyCartEvent = ReplicatedStorage:WaitForChild("BuyCartEvent")
 
 -- Handle CloseButton click to disable StoreGui
 local function onCloseButtonClicked()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		storeGui.Enabled = false
 	end
@@ -57,7 +60,7 @@ end
 local function saveTabSelection(tab)
 	currentSellTab = tab
 	-- Save to a client-side storage (we'll use a simple approach with a hidden GUI element)
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		-- Create or update a hidden StringValue to store the tab selection
 		local tabStorage = storeGui:FindFirstChild("TabStorage")
@@ -72,7 +75,7 @@ end
 
 -- Function to load the saved tab selection
 local function loadTabSelection()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		local tabStorage = storeGui:FindFirstChild("TabStorage")
 		if tabStorage then
@@ -84,17 +87,17 @@ end
 
 -- Function to update sell button states based on player's block count
 local function updateSellButtonStates()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if not storeGui then
 		return
 	end
 
-	local sellFrame = storeGui:FindFirstChild("Sell")
+	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 	if not sellFrame then
 		return
 	end
 
-	local sellBlocksFrame = sellFrame:FindFirstChild("SellBlocksFrame")
+	local sellBlocksFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
 	if not sellBlocksFrame then
 		return
 	end
@@ -153,7 +156,7 @@ end
 
 -- Function to show error frame when disabled button is clicked
 local function showErrorFrame(errorMessage)
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if not storeGui then
 		return
 	end
@@ -169,7 +172,7 @@ local function showErrorFrame(errorMessage)
 	end
 
 	-- Create or show modal backdrop to block all interaction
-	local sellFrame = storeGui:FindFirstChild("Sell")
+	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 	local shopFrame = storeGui:FindFirstChild("Shop")
 
 	if not sellFrame or not shopFrame then
@@ -193,7 +196,7 @@ end
 
 -- Function to hide error frame
 local function hideErrorFrame()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if not storeGui then
 		return
 	end
@@ -203,7 +206,7 @@ local function hideErrorFrame()
 		errorFrame.Visible = false
 
 		-- Hide modal backdrop to restore interaction
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		local shopFrame = storeGui:FindFirstChild("Shop")
 
 		if sellFrame then
@@ -223,7 +226,7 @@ end
 
 -- Function to update cart button states based on ownership and cash
 local function updateCartButtonStates()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if not storeGui then
 		return
 	end
@@ -242,7 +245,6 @@ local function updateCartButtonStates()
 	local playerCash = player:GetAttribute("Cash") or 0
 
 	-- Get constants for cart items
-	local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
 	local cartItems = Constants.CART_ITEMS
 
 	-- Find all cart buttons
@@ -349,11 +351,11 @@ end
 
 -- Function to switch to blocks tab
 local function switchToBlocksTab()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
-			local sellBlocksFrame = sellFrame:FindFirstChild("SellBlocksFrame")
+			local sellBlocksFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
 			local sellInventoryFrame = sellFrame:FindFirstChild("SellInventoryFrame")
 			local tabsFrame = sellFrame:FindFirstChild("Tabs")
 			local blocksTab = tabsFrame and tabsFrame:FindFirstChild("BlocksTab")
@@ -384,11 +386,11 @@ end
 
 -- Function to switch to inventory tab
 local function switchToInventoryTab()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
-			local sellBlocksFrame = sellFrame:FindFirstChild("SellBlocksFrame")
+			local sellBlocksFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
 			local sellInventoryFrame = sellFrame:FindFirstChild("SellInventoryFrame")
 			local tabsFrame = sellFrame:FindFirstChild("Tabs")
 			local blocksTab = tabsFrame and tabsFrame:FindFirstChild("BlocksTab")
@@ -421,9 +423,9 @@ local function initializeSellTabs()
 		return
 	end
 
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
 			local tabsFrame = sellFrame:FindFirstChild("Tabs")
 			if tabsFrame then
@@ -446,10 +448,10 @@ end
 
 -- Function to show Sell frame and hide others
 local function showSellFrame()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		local shopFrame = storeGui:FindFirstChild("Shop")
 
 		if buyOrSellFrame then
@@ -477,10 +479,10 @@ end
 
 -- Function to show Shop frame and hide others
 local function showShopFrame()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		local shopFrame = storeGui:FindFirstChild("Shop")
 
 		if buyOrSellFrame then
@@ -499,10 +501,10 @@ end
 
 -- Function to show BuyOrSell frame and hide others
 local function showBuyOrSellFrame()
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		local shopFrame = storeGui:FindFirstChild("Shop")
 
 		if buyOrSellFrame then
@@ -519,7 +521,7 @@ end
 
 openStoreEvent.OnClientEvent:Connect(function()
 	-- Debug: Check if StoreGui exists
-	local storeGui = playerGui:FindFirstChild("StoreGui")
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if not storeGui then
 		warn("StoreGui not found in PlayerGui! Contents:", playerGui:GetChildren())
 		return
@@ -550,7 +552,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 		end
 
 		-- Connect BackButton in Sell frame
-		local sellFrame = storeGui:FindFirstChild("Sell")
+		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
 			local backButton = sellFrame:FindFirstChild("BackButton")
 			if backButton then
@@ -568,9 +570,9 @@ openStoreEvent.OnClientEvent:Connect(function()
 		end
 
 		-- Connect sell button click events
-		local sellFrameLocal = storeGui:FindFirstChild("Sell")
+		local sellFrameLocal = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrameLocal then
-			local sellBlocksFrame = sellFrameLocal:FindFirstChild("SellBlocksFrame")
+			local sellBlocksFrame = sellFrameLocal:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
 			if sellBlocksFrame then
 				-- Connect all sell buttons
 				for _, child in ipairs(sellBlocksFrame:GetChildren()) do
@@ -614,11 +616,11 @@ openStoreEvent.OnClientEvent:Connect(function()
 	-- Connect to BlockCount attribute changes to update button states
 	player:GetAttributeChangedSignal("BlockCount"):Connect(function()
 		-- Only update if SellBlocksFrame is currently visible
-		local storeGuiLocal = playerGui:FindFirstChild("StoreGui")
+		local storeGuiLocal = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 		if storeGuiLocal and storeGuiLocal.Enabled then
-			local sellFrame = storeGuiLocal:FindFirstChild("Sell")
+			local sellFrame = storeGuiLocal:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 			if sellFrame then
-				local sellBlocksFrame = sellFrame:FindFirstChild("SellBlocksFrame")
+				local sellBlocksFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
 				if sellBlocksFrame and sellBlocksFrame.Visible then
 					updateSellButtonStates()
 				end
@@ -629,7 +631,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 	-- Connect to Cash attribute changes to update cart button states
 	player:GetAttributeChangedSignal("Cash"):Connect(function()
 		-- Only update if Shop frame is currently visible
-		local storeGuiLocal = playerGui:FindFirstChild("StoreGui")
+		local storeGuiLocal = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 		if storeGuiLocal and storeGuiLocal.Enabled then
 			local shopFrameLocal = storeGuiLocal:FindFirstChild("Shop")
 			if shopFrameLocal and shopFrameLocal.Visible then
@@ -645,7 +647,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 
 	-- Ensure BuyOrSell menu is visible (in case other menus were previously shown)
 	local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
-	local sellFrame = storeGui:FindFirstChild("Sell")
+	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 	local shopFrame = storeGui:FindFirstChild("Shop")
 
 	if buyOrSellFrame then
