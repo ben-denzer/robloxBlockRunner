@@ -3,7 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Ensure the module is loaded first (creates the event)
-require(ReplicatedStorage:WaitForChild("Hello"))
+require(ReplicatedStorage:WaitForChild("Events"))
 -- Then get the event directly from ReplicatedStorage (same instance)
 local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
 local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")

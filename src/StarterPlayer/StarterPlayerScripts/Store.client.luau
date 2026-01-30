@@ -29,7 +29,7 @@ local UNAVAILABLE_COLOR = Color3.fromRGB(200, 100, 100) -- Red for can't afford
 local AVAILABLE_COLOR = Color3.fromRGB(200, 200, 200) -- Default gray
 
 -- Ensure the module is loaded first (creates the event)
-require(ReplicatedStorage:WaitForChild("Hello"))
+require(ReplicatedStorage:WaitForChild("Events"))
 -- Then get the event directly from ReplicatedStorage (same instance as server)
 local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
 local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
