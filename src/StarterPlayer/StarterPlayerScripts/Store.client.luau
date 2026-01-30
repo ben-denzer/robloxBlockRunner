@@ -29,6 +29,7 @@ require(ReplicatedStorage:WaitForChild("Hello"))
 -- Then get the event directly from ReplicatedStorage (same instance as server)
 local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
 local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
+local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
 
 -- Handle CloseButton click to disable StoreGui
 local function onCloseButtonClicked()
@@ -139,7 +140,7 @@ local function updateSellButtonStates()
 end
 
 -- Function to show error frame when disabled button is clicked
-local function showSellErrorFrame()
+local function showSellErrorFrame(errorMessage)
 	local storeGui = playerGui:FindFirstChild("StoreGui")
 	if not storeGui then
 		return
@@ -152,7 +153,7 @@ local function showSellErrorFrame()
 
 	local dynamicText = errorFrame:FindFirstChild("DynamicText")
 	if dynamicText then
-		dynamicText.Text = "You do not have enough blocks to complete this transaction"
+		dynamicText.Text = errorMessage
 	end
 
 	-- Create or show modal backdrop to block all interaction
@@ -202,14 +203,39 @@ local function hideSellErrorFrame()
 end
 
 -- Function to handle sell button clicks
-local function onSellButtonClicked(button)
+local function onSellBlocksButtonClicked(button)
 	local isEnabled = button:GetAttribute("Enabled")
 	if isEnabled then
-		-- Handle normal sell transaction (to be implemented)
-		print("Sell button clicked - transaction would happen here")
+		-- Get transaction details from button
+		local blocksToTurnInValue = button:FindFirstChild("BlocksToTurnIn")
+		local cashToReceiveValue = button:FindFirstChild("Payout")
+
+		if not blocksToTurnInValue or not blocksToTurnInValue:IsA("NumberValue") then
+			showSellErrorFrame("Invalid button configuration - missing blocks value")
+			return
+		end
+
+		if not cashToReceiveValue or not cashToReceiveValue:IsA("NumberValue") then
+			showSellErrorFrame("Invalid button configuration - missing cash value")
+			return
+		end
+
+		local blocksToSell = blocksToTurnInValue.Value
+		local totalCash = cashToReceiveValue.Value
+
+		-- Call server to perform the transaction
+		local success, result1, _ = sellBlocksEvent:InvokeServer(blocksToSell, totalCash)
+
+		if success then
+			-- Transaction successful, update button states
+			updateSellButtonStates()
+		else
+			-- Show error message from server
+			showSellErrorFrame(result1 or "Transaction failed")
+		end
 	else
 		-- Show error frame for disabled button
-		showSellErrorFrame()
+		showSellErrorFrame("You do not have enough blocks to complete this transaction")
 	end
 end
 
@@ -440,7 +466,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 				for _, child in ipairs(sellBlocksFrame:GetChildren()) do
 					if child:IsA("ImageButton") and child:HasTag("sell-blocks-button") then
 						child.MouseButton1Click:Connect(function()
-							onSellButtonClicked(child)
+							onSellBlocksButtonClicked(child)
 						end)
 					end
 				end

@@ -11,6 +11,9 @@ local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
 -- Import DataManager for saving player data when store opens
 local DataManager = require(game:GetService("ServerScriptService").DataManager)
 
+-- Get the sell blocks event
+local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
+
 -- Track which players can trigger the store (prevents spam after closing)
 local playerCooldowns = {}
 
@@ -38,6 +41,33 @@ local function onCashierTriggerTouched(_triggerPart, hit)
 	end
 end
 
+-- Function to handle selling blocks
+local function onSellBlocks(player, blocksToSell, totalCash)
+	if not player then
+		return false, "Player not found"
+	end
+
+	-- Double-check that the player has enough blocks
+	local playerData = DataManager.getPlayerData(player)
+	local currentBlocks = playerData.BlockCount or 0
+
+	if currentBlocks < blocksToSell then
+		return false, "Not enough blocks"
+	end
+
+	-- Calculate cash per block for the transaction
+	local cashPerBlock = totalCash / blocksToSell
+
+	-- Perform the transaction
+	local success, newBlockCount, cashEarned = DataManager.sellBlocksFromPlayer(player, blocksToSell, cashPerBlock)
+
+	if success then
+		return true, newBlockCount, cashEarned
+	else
+		return false, "Transaction failed"
+	end
+end
+
 -- Function to reset cooldown when store is closed (called from client)
 local function onStoreClosed(player)
 	if player then
@@ -58,6 +88,9 @@ local function init()
 
 	-- Connect close store event
 	closeStoreEvent.OnServerEvent:Connect(onStoreClosed)
+
+	-- Connect sell blocks function
+	sellBlocksEvent.OnServerInvoke = onSellBlocks
 end
 
 return {

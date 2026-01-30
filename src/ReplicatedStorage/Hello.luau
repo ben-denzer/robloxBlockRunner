@@ -11,7 +11,13 @@ local CloseStoreEvent = Instance.new("RemoteEvent")
 CloseStoreEvent.Name = "CloseStoreEvent"
 CloseStoreEvent.Parent = ReplicatedStorage
 
+-- Create RemoteFunction for selling blocks
+local SellBlocksEvent = Instance.new("RemoteFunction")
+SellBlocksEvent.Name = "SellBlocksEvent"
+SellBlocksEvent.Parent = ReplicatedStorage
+
 return {
 	OpenStoreEvent = OpenStoreEvent,
 	CloseStoreEvent = CloseStoreEvent,
+	SellBlocksEvent = SellBlocksEvent,
 }

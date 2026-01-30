@@ -185,6 +185,36 @@ local function addBlocksToPlayer(player, count)
 	return true, newCount, blocksToAdd
 end
 
+-- Function to sell blocks from player inventory
+-- Returns: success (boolean), newBlockCount (number), cashEarned (number)
+local function sellBlocksFromPlayer(player, blocksToSell, cashPerBlock)
+	local userId = tostring(player.UserId)
+	local data = getPlayerData(player)
+
+	local currentBlockCount = data.BlockCount or 0
+	local currentCash = data.Cash or 0
+
+	-- Check if player has enough blocks
+	if currentBlockCount < blocksToSell then
+		return false, currentBlockCount, 0
+	end
+
+	-- Calculate cash earned
+	local cashEarned = blocksToSell * cashPerBlock
+
+	-- Update block count
+	local newBlockCount = currentBlockCount - blocksToSell
+	data.BlockCount = newBlockCount
+	playerDataCache[userId] = table.clone(data)
+	player:SetAttribute("BlockCount", newBlockCount)
+
+	-- Update cash (with immediate save to database)
+	local newCash = currentCash + cashEarned
+	updatePlayerCash(player, newCash)
+
+	return true, newBlockCount, cashEarned
+end
+
 -- Function to save all data for a specific player immediately
 local function savePlayerDataImmediately(player)
 	local userId = tostring(player.UserId)
@@ -281,6 +311,7 @@ return {
 	updatePlayerData = updatePlayerData,
 	updatePlayerCash = updatePlayerCash,
 	addBlocksToPlayer = addBlocksToPlayer,
+	sellBlocksFromPlayer = sellBlocksFromPlayer,
 	savePlayerData = savePlayerData,
 	savePlayerDataImmediately = savePlayerDataImmediately,
 	loadPlayerData = loadPlayerData,
