@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-
+local Utils = require(ReplicatedStorage:WaitForChild("Utils"))
 -- Store the original walk speed when the store opens
 local originalWalkSpeed = 16 -- Default Roblox walk speed
 
@@ -23,10 +23,6 @@ local UNSELECTED_COLOR = Color3.fromRGB(240, 240, 240)
 -- Transparency values for disabled buttons
 local DISABLED_TRANSPARENCY = 0.7
 local ENABLED_TRANSPARENCY = 0
-
--- Colors for cart items
-local UNAVAILABLE_COLOR = Color3.fromRGB(200, 100, 100) -- Red for can't afford
-local AVAILABLE_COLOR = Color3.fromRGB(200, 200, 200) -- Default gray
 
 -- Ensure the module is loaded first (creates the event)
 require(ReplicatedStorage:WaitForChild("Events"))
@@ -219,7 +215,7 @@ local function updateCartButtonStates()
 		return
 	end
 
-	local cartFrame = shopFrame:FindFirstChild("CartFrame")
+	local cartFrame = shopFrame:FindFirstChild("BuyCartsFrame")
 	if not cartFrame then
 		return
 	end
@@ -234,7 +230,7 @@ local function updateCartButtonStates()
 	-- Find all cart buttons
 	local cartButtons = {}
 	for _, child in ipairs(cartFrame:GetChildren()) do
-		if child:IsA("ImageButton") and child:HasTag("cart-button") then
+		if child:IsA("ImageButton") and child:HasTag("buy-cart-button") then
 			table.insert(cartButtons, child)
 		end
 	end
@@ -252,17 +248,14 @@ local function updateCartButtonStates()
 			-- Update visual state
 			local imageLabel = button:FindFirstChild("ImageLabel")
 			local nameText = button:FindFirstChild("NameText")
-			local priceText = button:FindFirstChild("PriceText")
+			local priceText = button:FindFirstChild("CashText")
 			local descriptionText = button:FindFirstChild("DescriptionText")
 
 			local transparency = canAfford and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
-			local backgroundColor = AVAILABLE_COLOR
-			if not hasEnoughCash then
-				backgroundColor = UNAVAILABLE_COLOR
-			end
 
 			if imageLabel then
 				imageLabel.ImageTransparency = transparency
+				imageLabel.Image = cartData.image
 			end
 			if nameText then
 				nameText.TextTransparency = transparency
@@ -274,8 +267,6 @@ local function updateCartButtonStates()
 				descriptionText.TextTransparency = transparency
 			end
 
-			button.BackgroundColor3 = backgroundColor
-
 			-- Store the enabled state for click handling
 			button:SetAttribute("Enabled", canAfford)
 
@@ -284,7 +275,7 @@ local function updateCartButtonStates()
 				nameText.Text = cartData.displayName
 			end
 			if priceText then
-				priceText.Text = "$" .. tostring(price)
+				priceText.Text = "$" .. Utils.formatCash(price)
 			end
 			if descriptionText then
 				descriptionText.Text = cartData.description

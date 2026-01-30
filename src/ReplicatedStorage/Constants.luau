@@ -8,23 +8,27 @@ return {
 	-- Cart items available for purchase
 	-- Each cart sets wagon capacity directly and costs cash
 	CART_ITEMS = {
-		["Cart60"] = {
-			price = 10000,
+		["BuyCart60Button"] = {
+			-- price = 100000,
+			price = 5000,
 			wagonSize = 60,
 			displayName = "Small Cart",
-			description = "Sets wagon capacity to 60 blocks"
+			description = "Holds up to 60 blocks",
+			image = "rbxassetid://124616601484600",
 		},
-		["Cart200"] = {
-			price = 50000,
+		["BuyCart200Button"] = {
+			price = 500000,
 			wagonSize = 200,
-			displayName = "Medium Cart",
-			description = "Sets wagon capacity to 200 blocks"
-		},
-		["Cart600"] = {
-			price = 200000,
-			wagonSize = 600,
 			displayName = "Large Cart",
-			description = "Sets wagon capacity to 600 blocks"
-		}
-	}
+			description = "Holds up to 200 blocks",
+			image = "rbxassetid://134561262294236",
+		},
+		["BuyCart600Button"] = {
+			price = 2000000,
+			wagonSize = 600,
+			displayName = "Huge Cart",
+			description = "Holds up to 600 blocks",
+			image = "rbxassetid://134561262294236",
+		},
+	},
 }
