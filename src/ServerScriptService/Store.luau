@@ -74,11 +74,8 @@ local function onSellBlocks(player, buttonIdentifier)
 		return false, "Not enough blocks"
 	end
 
-	-- Calculate cash per block for the transaction
-	local cashPerBlock = totalCash / blocksToSell
-
 	-- Perform the transaction
-	local success, newBlockCount, cashEarned = DataManager.sellBlocksFromPlayer(player, blocksToSell, cashPerBlock)
+	local success, newBlockCount, cashEarned = DataManager.sellBlocksFromPlayer(player, blocksToSell, totalCash)
 
 	if success then
 		return true, newBlockCount, cashEarned
