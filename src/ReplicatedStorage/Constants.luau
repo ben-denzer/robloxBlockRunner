@@ -18,6 +18,7 @@ return {
 			TABS = "Tabs",
 			SELL_BLOCKS = "SellBlocksFrame",
 			SELL_INVENTORY = "SellInventoryFrame",
+			BUY_CARTS = "BuyCartsFrame",
 		},
 		BUTTONS = {
 			CLOSE = "CloseButton",
@@ -26,6 +27,28 @@ return {
 			CONFIRM = "ConfirmButton",
 			SELL = "SellButton",
 			SHOP = "ShopButton",
+			BLOCKS_TAB = "BlocksTab",
+			INVENTORY_TAB = "InventoryTab",
+		},
+		ELEMENTS = {
+			IMAGE_LABEL = "ImageLabel",
+			BLOCKS_TEXT = "BlocksText",
+			CASH_TEXT = "CashText",
+			NAME_TEXT = "NameText",
+			DESCRIPTION_TEXT = "DescriptionText",
+			DYNAMIC_TEXT = "DynamicText",
+			MODAL_BACKDROP = "ModalBackdrop",
+		},
+		ATTRIBUTES = {
+			BLOCKS_TO_TURN_IN = "BlocksToTurnIn",
+			ENABLED = "Enabled",
+		},
+		TAGS = {
+			SELL_BLOCKS_BUTTON = "sell-blocks-button",
+			BUY_CART_BUTTON = "buy-cart-button",
+		},
+		STORAGE = {
+			TAB_STORAGE = "TabStorage",
 		},
 	},
 
@@ -54,5 +77,32 @@ return {
 			description = "Holds up to 600 blocks",
 			image = "rbxassetid://107001388860949",
 		},
+	},
+
+	-- World objects and locations
+	WORLD_OBJECTS = {
+		STORE = "Store",
+		CASHIER_TRIGGER = "CashierTrigger",
+	},
+
+	-- Remote events
+	EVENTS = {
+		OPEN_STORE = "OpenStoreEvent",
+		CLOSE_STORE = "CloseStoreEvent",
+		SELL_BLOCKS = "SellBlocksEvent",
+		BUY_CART = "BuyCartEvent",
+	},
+
+	-- Player data attributes
+	PLAYER_ATTRIBUTES = {
+		BLOCK_COUNT = "BlockCount",
+		CASH = "Cash",
+	},
+
+	-- Transaction identifiers (must match button names in UI)
+	TRANSACTIONS = {
+		SELL_10_BLOCKS = "Sell10BlocksButton",
+		SELL_50_BLOCKS = "Sell50BlocksButton",
+		SELL_100_BLOCKS = "Sell100BlocksButton",
 	},
 }

@@ -30,10 +30,10 @@ local ENABLED_TRANSPARENCY = 0
 -- Ensure the module is loaded first (creates the event)
 require(ReplicatedStorage:WaitForChild("Events"))
 -- Then get the event directly from ReplicatedStorage (same instance as server)
-local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
-local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
-local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
-local buyCartEvent = ReplicatedStorage:WaitForChild("BuyCartEvent")
+local openStoreEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.OPEN_STORE)
+local closeStoreEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.CLOSE_STORE)
+local sellBlocksEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.SELL_BLOCKS)
+local buyCartEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.BUY_CART)
 
 -- Handle CloseButton click to disable StoreGui
 local function onCloseButtonClicked()
@@ -63,10 +63,10 @@ local function saveTabSelection(tab)
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
 		-- Create or update a hidden StringValue to store the tab selection
-		local tabStorage = storeGui:FindFirstChild("TabStorage")
+		local tabStorage = storeGui:FindFirstChild(UI_ELEMENTS.STORAGE.TAB_STORAGE)
 		if not tabStorage then
 			tabStorage = Instance.new("StringValue")
-			tabStorage.Name = "TabStorage"
+			tabStorage.Name = UI_ELEMENTS.STORAGE.TAB_STORAGE
 			tabStorage.Parent = storeGui
 		end
 		tabStorage.Value = tab
@@ -77,7 +77,7 @@ end
 local function loadTabSelection()
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local tabStorage = storeGui:FindFirstChild("TabStorage")
+		local tabStorage = storeGui:FindFirstChild(UI_ELEMENTS.STORAGE.TAB_STORAGE)
 		if tabStorage then
 			return tabStorage.Value
 		end
@@ -108,22 +108,22 @@ local function updateSellButtonStates()
 	-- Find all buttons tagged "sell-blocks-button"
 	local sellButtons = {}
 	for _, child in ipairs(sellBlocksFrame:GetChildren()) do
-		if child:IsA("ImageButton") and child:HasTag("sell-blocks-button") then
+		if child:IsA("ImageButton") and child:HasTag(UI_ELEMENTS.TAGS.SELL_BLOCKS_BUTTON) then
 			table.insert(sellButtons, child)
 		end
 	end
 
 	-- Update each button's state
 	for _, button in ipairs(sellButtons) do
-		local blocksToTurnInValue = button:FindFirstChild("BlocksToTurnIn")
+		local blocksToTurnInValue = button:FindFirstChild(UI_ELEMENTS.ATTRIBUTES.BLOCKS_TO_TURN_IN)
 		if blocksToTurnInValue and blocksToTurnInValue:IsA("NumberValue") then
 			local blocksRequired = blocksToTurnInValue.Value
 			local hasEnoughBlocks = playerBlockCount >= blocksRequired
 
 			-- Update visual state
-			local imageLabel = button:FindFirstChild("ImageLabel")
-			local blocksText = button:FindFirstChild("BlocksText")
-			local cashText = button:FindFirstChild("CashText")
+			local imageLabel = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.IMAGE_LABEL)
+			local blocksText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.BLOCKS_TEXT)
+			local cashText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.CASH_TEXT)
 
 			local transparency = hasEnoughBlocks and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
 
@@ -138,14 +138,14 @@ local function updateSellButtonStates()
 			end
 
 			-- Store the enabled state for click handling
-			button:SetAttribute("Enabled", hasEnoughBlocks)
+			button:SetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED, hasEnoughBlocks)
 		end
 	end
 end
 
 local function createModalBackdrop()
 	local modalBackdrop = Instance.new("TextButton")
-	modalBackdrop.Name = "ModalBackdrop"
+	modalBackdrop.Name = UI_ELEMENTS.ELEMENTS.MODAL_BACKDROP
 	modalBackdrop.Size = UDim2.fromScale(1, 1)
 	modalBackdrop.Position = UDim2.fromScale(0, 0)
 	modalBackdrop.BackgroundTransparency = 1
@@ -161,19 +161,19 @@ local function showErrorFrame(errorMessage)
 		return
 	end
 
-	local errorFrame = storeGui:FindFirstChild("Error")
+	local errorFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.ERROR)
 	if not errorFrame then
 		return
 	end
 
-	local dynamicText = errorFrame:FindFirstChild("DynamicText")
+	local dynamicText = errorFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.DYNAMIC_TEXT)
 	if dynamicText then
 		dynamicText.Text = errorMessage
 	end
 
 	-- Create or show modal backdrop to block all interaction
 	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
-	local shopFrame = storeGui:FindFirstChild("Shop")
+	local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 
 	if not sellFrame or not shopFrame then
 		return
@@ -182,7 +182,7 @@ local function showErrorFrame(errorMessage)
 	local visibleFrame = sellFrame.Visible and sellFrame or shopFrame
 
 	if visibleFrame then
-		local modalBackdrop = visibleFrame:FindFirstChild("ModalBackdrop")
+		local modalBackdrop = visibleFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.MODAL_BACKDROP)
 		if not modalBackdrop then
 			modalBackdrop = createModalBackdrop()
 			modalBackdrop.Parent = visibleFrame
@@ -201,22 +201,22 @@ local function hideErrorFrame()
 		return
 	end
 
-	local errorFrame = storeGui:FindFirstChild("Error")
+	local errorFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.ERROR)
 	if errorFrame then
 		errorFrame.Visible = false
 
 		-- Hide modal backdrop to restore interaction
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
-		local shopFrame = storeGui:FindFirstChild("Shop")
+		local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 
 		if sellFrame then
-			local modalBackdrop = sellFrame:FindFirstChild("ModalBackdrop")
+			local modalBackdrop = sellFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.MODAL_BACKDROP)
 			if modalBackdrop then
 				modalBackdrop.Visible = false
 			end
 		end
 		if shopFrame then
-			local modalBackdrop = shopFrame:FindFirstChild("ModalBackdrop")
+			local modalBackdrop = shopFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.MODAL_BACKDROP)
 			if modalBackdrop then
 				modalBackdrop.Visible = false
 			end
@@ -231,12 +231,12 @@ local function updateCartButtonStates()
 		return
 	end
 
-	local shopFrame = storeGui:FindFirstChild("Shop")
+	local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 	if not shopFrame then
 		return
 	end
 
-	local cartFrame = shopFrame:FindFirstChild("BuyCartsFrame")
+	local cartFrame = shopFrame:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_CARTS)
 	if not cartFrame then
 		return
 	end
@@ -250,7 +250,7 @@ local function updateCartButtonStates()
 	-- Find all cart buttons
 	local cartButtons = {}
 	for _, child in ipairs(cartFrame:GetChildren()) do
-		if child:IsA("ImageButton") and child:HasTag("buy-cart-button") then
+		if child:IsA("ImageButton") and child:HasTag(UI_ELEMENTS.TAGS.BUY_CART_BUTTON) then
 			table.insert(cartButtons, child)
 		end
 	end
@@ -266,10 +266,10 @@ local function updateCartButtonStates()
 			local canAfford = hasEnoughCash
 
 			-- Update visual state
-			local imageLabel = button:FindFirstChild("ImageLabel")
-			local nameText = button:FindFirstChild("NameText")
-			local priceText = button:FindFirstChild("CashText")
-			local descriptionText = button:FindFirstChild("DescriptionText")
+			local imageLabel = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.IMAGE_LABEL)
+			local nameText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.NAME_TEXT)
+			local priceText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.CASH_TEXT)
+			local descriptionText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.DESCRIPTION_TEXT)
 
 			local transparency = canAfford and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
 
@@ -288,7 +288,7 @@ local function updateCartButtonStates()
 			end
 
 			-- Store the enabled state for click handling
-			button:SetAttribute("Enabled", canAfford)
+			button:SetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED, canAfford)
 
 			-- Update text content
 			if nameText then
@@ -306,7 +306,7 @@ end
 
 -- Function to handle cart button clicks
 local function onCartButtonClicked(button)
-	local isEnabled = button:GetAttribute("Enabled")
+	local isEnabled = button:GetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED)
 	if isEnabled then
 		-- Send cart ID to server (server will validate the purchase)
 		local cartId = button.Name
@@ -328,7 +328,7 @@ end
 
 -- Function to handle sell button clicks
 local function onSellBlocksButtonClicked(button)
-	local isEnabled = button:GetAttribute("Enabled")
+	local isEnabled = button:GetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED)
 	if isEnabled then
 		-- Send button identifier to server (server will validate the transaction details)
 		local buttonIdentifier = button.Name
@@ -356,10 +356,10 @@ local function switchToBlocksTab()
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
 			local sellBlocksFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
-			local sellInventoryFrame = sellFrame:FindFirstChild("SellInventoryFrame")
-			local tabsFrame = sellFrame:FindFirstChild("Tabs")
-			local blocksTab = tabsFrame and tabsFrame:FindFirstChild("BlocksTab")
-			local inventoryTab = tabsFrame and tabsFrame:FindFirstChild("InventoryTab")
+			local sellInventoryFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_INVENTORY)
+			local tabsFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.TABS)
+			local blocksTab = tabsFrame and tabsFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.BLOCKS_TAB)
+			local inventoryTab = tabsFrame and tabsFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.INVENTORY_TAB)
 
 			-- Show/hide frames
 			if sellBlocksFrame then
@@ -391,10 +391,10 @@ local function switchToInventoryTab()
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
 			local sellBlocksFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_BLOCKS)
-			local sellInventoryFrame = sellFrame:FindFirstChild("SellInventoryFrame")
-			local tabsFrame = sellFrame:FindFirstChild("Tabs")
-			local blocksTab = tabsFrame and tabsFrame:FindFirstChild("BlocksTab")
-			local inventoryTab = tabsFrame and tabsFrame:FindFirstChild("InventoryTab")
+			local sellInventoryFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.SELL_INVENTORY)
+			local tabsFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.TABS)
+			local blocksTab = tabsFrame and tabsFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.BLOCKS_TAB)
+			local inventoryTab = tabsFrame and tabsFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.INVENTORY_TAB)
 
 			-- Show/hide frames
 			if sellBlocksFrame then
@@ -427,10 +427,10 @@ local function initializeSellTabs()
 	if storeGui then
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
-			local tabsFrame = sellFrame:FindFirstChild("Tabs")
+			local tabsFrame = sellFrame:FindFirstChild(UI_ELEMENTS.FRAMES.TABS)
 			if tabsFrame then
-				local blocksTab = tabsFrame:FindFirstChild("BlocksTab")
-				local inventoryTab = tabsFrame:FindFirstChild("InventoryTab")
+				local blocksTab = tabsFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.BLOCKS_TAB)
+				local inventoryTab = tabsFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.INVENTORY_TAB)
 
 				-- Connect tab button events
 				if blocksTab then
@@ -450,9 +450,9 @@ end
 local function showSellFrame()
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
+		local buyOrSellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_OR_SELL)
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
-		local shopFrame = storeGui:FindFirstChild("Shop")
+		local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 
 		if buyOrSellFrame then
 			buyOrSellFrame.Visible = false
@@ -481,9 +481,9 @@ end
 local function showShopFrame()
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
+		local buyOrSellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_OR_SELL)
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
-		local shopFrame = storeGui:FindFirstChild("Shop")
+		local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 
 		if buyOrSellFrame then
 			buyOrSellFrame.Visible = false
@@ -503,9 +503,9 @@ end
 local function showBuyOrSellFrame()
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 	if storeGui then
-		local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
+		local buyOrSellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_OR_SELL)
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
-		local shopFrame = storeGui:FindFirstChild("Shop")
+		local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 
 		if buyOrSellFrame then
 			buyOrSellFrame.Visible = true
@@ -529,9 +529,9 @@ openStoreEvent.OnClientEvent:Connect(function()
 
 	-- Connect buttons if not already connected
 	if not buttonsConnected then
-		local buyOrSellMenu = storeGui:FindFirstChild("BuyOrSell")
+		local buyOrSellMenu = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_OR_SELL)
 		if buyOrSellMenu then
-			local closeButton = buyOrSellMenu:FindFirstChild("CloseButton")
+			local closeButton = buyOrSellMenu:FindFirstChild(UI_ELEMENTS.BUTTONS.CLOSE)
 			if closeButton then
 				closeButton.MouseButton1Click:Connect(onCloseButtonClicked)
 			else
@@ -539,8 +539,8 @@ openStoreEvent.OnClientEvent:Connect(function()
 			end
 
 			-- Connect SellButton and ShopButton click events
-			local sellButton = buyOrSellMenu:FindFirstChild("SellButton")
-			local shopButton = buyOrSellMenu:FindFirstChild("ShopButton")
+			local sellButton = buyOrSellMenu:FindFirstChild(UI_ELEMENTS.BUTTONS.SELL)
+			local shopButton = buyOrSellMenu:FindFirstChild(UI_ELEMENTS.BUTTONS.SHOP)
 
 			if sellButton then
 				sellButton.MouseButton1Click:Connect(showSellFrame)
@@ -554,16 +554,16 @@ openStoreEvent.OnClientEvent:Connect(function()
 		-- Connect BackButton in Sell frame
 		local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
 		if sellFrame then
-			local backButton = sellFrame:FindFirstChild("BackButton")
+			local backButton = sellFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.BACK)
 			if backButton then
 				backButton.MouseButton1Click:Connect(showBuyOrSellFrame)
 			end
 		end
 
 		-- Connect BackButton in Shop frame
-		local shopFrame = storeGui:FindFirstChild("Shop")
+		local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 		if shopFrame then
-			local backButton = shopFrame:FindFirstChild("BackButton")
+			local backButton = shopFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.BACK)
 			if backButton then
 				backButton.MouseButton1Click:Connect(showBuyOrSellFrame)
 			end
@@ -576,7 +576,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 			if sellBlocksFrame then
 				-- Connect all sell buttons
 				for _, child in ipairs(sellBlocksFrame:GetChildren()) do
-					if child:IsA("ImageButton") and child:HasTag("sell-blocks-button") then
+					if child:IsA("ImageButton") and child:HasTag(UI_ELEMENTS.TAGS.SELL_BLOCKS_BUTTON) then
 						child.MouseButton1Click:Connect(function()
 							onSellBlocksButtonClicked(child)
 						end)
@@ -586,22 +586,22 @@ openStoreEvent.OnClientEvent:Connect(function()
 		end
 
 		-- Connect error frame cancel button
-		local errorFrame = storeGui:FindFirstChild("Error")
+		local errorFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.ERROR)
 		if errorFrame then
-			local cancelButton = errorFrame:FindFirstChild("CancelButton")
+			local cancelButton = errorFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.CANCEL)
 			if cancelButton then
 				cancelButton.MouseButton1Click:Connect(hideErrorFrame)
 			end
 		end
 
 		-- Connect cart button click events
-		local shopFrameConnect = storeGui:FindFirstChild("Shop")
+		local shopFrameConnect = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 		if shopFrameConnect then
-			local cartFrame = shopFrameConnect:FindFirstChild("BuyCartsFrame")
+			local cartFrame = shopFrameConnect:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_CARTS)
 			if cartFrame then
 				-- Connect all cart buttons
 				for _, child in ipairs(cartFrame:GetChildren()) do
-					if child:IsA("ImageButton") and child:HasTag("buy-cart-button") then
+					if child:IsA("ImageButton") and child:HasTag(UI_ELEMENTS.TAGS.BUY_CART_BUTTON) then
 						child.MouseButton1Click:Connect(function()
 							onCartButtonClicked(child)
 						end)
@@ -633,7 +633,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 		-- Only update if Shop frame is currently visible
 		local storeGuiLocal = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 		if storeGuiLocal and storeGuiLocal.Enabled then
-			local shopFrameLocal = storeGuiLocal:FindFirstChild("Shop")
+			local shopFrameLocal = storeGuiLocal:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 			if shopFrameLocal and shopFrameLocal.Visible then
 				updateCartButtonStates()
 			end
@@ -646,9 +646,9 @@ openStoreEvent.OnClientEvent:Connect(function()
 	storeGui.Enabled = true
 
 	-- Ensure BuyOrSell menu is visible (in case other menus were previously shown)
-	local buyOrSellFrame = storeGui:FindFirstChild("BuyOrSell")
+	local buyOrSellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_OR_SELL)
 	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
-	local shopFrame = storeGui:FindFirstChild("Shop")
+	local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 
 	if buyOrSellFrame then
 		buyOrSellFrame.Visible = true

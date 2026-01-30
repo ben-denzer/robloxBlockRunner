@@ -2,28 +2,30 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+
 -- Ensure the module is loaded first (creates the event)
 require(ReplicatedStorage:WaitForChild("Events"))
 -- Then get the event directly from ReplicatedStorage (same instance)
-local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
-local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
+local openStoreEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.OPEN_STORE)
+local closeStoreEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.CLOSE_STORE)
 
 -- Import DataManager for saving player data when store opens
 local DataManager = require(game:GetService("ServerScriptService").DataManager)
 
 -- Get the sell blocks event
-local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
+local sellBlocksEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.SELL_BLOCKS)
 
 -- Get the buy cart event
-local buyCartEvent = ReplicatedStorage:WaitForChild("BuyCartEvent")
+local buyCartEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.BUY_CART)
 
 -- Configuration for valid sell transactions
 -- Key: button identifier (must match button.Name in the UI), Value: {blocksRequired, cashReward}
 -- IMPORTANT: Button names in the UI must exactly match these keys for transactions to work
 local SELL_BLOCKS_TRANSACTIONS = {
-	["Sell10BlocksButton"] = { blocks = 10, cash = 10000 },
-	["Sell50BlocksButton"] = { blocks = 50, cash = 75000 },
-	["Sell100BlocksButton"] = { blocks = 100, cash = 200000 },
+	[Constants.TRANSACTIONS.SELL_10_BLOCKS] = { blocks = 10, cash = 10000 },
+	[Constants.TRANSACTIONS.SELL_50_BLOCKS] = { blocks = 50, cash = 75000 },
+	[Constants.TRANSACTIONS.SELL_100_BLOCKS] = { blocks = 100, cash = 200000 },
 	-- Add more transactions as needed - ensure button names in UI match these keys
 }
 
@@ -71,7 +73,7 @@ local function onSellBlocks(player, buttonIdentifier)
 
 	-- Double-check that the player has enough blocks
 	local playerData = DataManager.getPlayerData(player)
-	local currentBlocks = playerData.BlockCount or 0
+	local currentBlocks = playerData[Constants.PLAYER_ATTRIBUTES.BLOCK_COUNT] or 0
 
 	if currentBlocks < blocksToSell then
 		return false, "Not enough blocks"
@@ -95,7 +97,6 @@ local function onBuyCart(player, cartItemId)
 	end
 
 	-- Validate that this is a valid cart item
-	local Constants = require(game:GetService("ReplicatedStorage").Constants)
 	if not Constants.CART_ITEMS[cartItemId] then
 		return false, "Invalid cart item"
 	end
@@ -123,7 +124,8 @@ end
 -- Initialize store system
 local function init()
 	-- Setup cashier trigger
-	local cashierTrigger = workspace:WaitForChild("Store"):WaitForChild("CashierTrigger")
+	local cashierTrigger =
+		workspace:WaitForChild(Constants.WORLD_OBJECTS.STORE):WaitForChild(Constants.WORLD_OBJECTS.CASHIER_TRIGGER)
 	cashierTrigger.Touched:Connect(function(hit)
 		onCashierTriggerTouched(cashierTrigger, hit)
 	end)
