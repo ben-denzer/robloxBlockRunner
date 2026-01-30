@@ -24,12 +24,17 @@ local UNSELECTED_COLOR = Color3.fromRGB(240, 240, 240)
 local DISABLED_TRANSPARENCY = 0.7
 local ENABLED_TRANSPARENCY = 0
 
+-- Colors for cart items
+local UNAVAILABLE_COLOR = Color3.fromRGB(200, 100, 100) -- Red for can't afford
+local AVAILABLE_COLOR = Color3.fromRGB(200, 200, 200) -- Default gray
+
 -- Ensure the module is loaded first (creates the event)
 require(ReplicatedStorage:WaitForChild("Hello"))
 -- Then get the event directly from ReplicatedStorage (same instance as server)
 local openStoreEvent = ReplicatedStorage:WaitForChild("OpenStoreEvent")
 local closeStoreEvent = ReplicatedStorage:WaitForChild("CloseStoreEvent")
 local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
+local buyCartEvent = ReplicatedStorage:WaitForChild("BuyCartEvent")
 
 -- Handle CloseButton click to disable StoreGui
 local function onCloseButtonClicked()
@@ -202,6 +207,134 @@ local function hideSellErrorFrame()
 	end
 end
 
+-- Function to update cart button states based on ownership and cash
+local function updateCartButtonStates()
+	local storeGui = playerGui:FindFirstChild("StoreGui")
+	if not storeGui then
+		return
+	end
+
+	local shopFrame = storeGui:FindFirstChild("Shop")
+	if not shopFrame then
+		return
+	end
+
+	local cartFrame = shopFrame:FindFirstChild("CartFrame")
+	if not cartFrame then
+		return
+	end
+
+	-- Get player's current cash
+	local playerCash = player:GetAttribute("Cash") or 0
+
+	-- Get constants for cart items
+	local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+	local cartItems = Constants.CART_ITEMS
+
+	-- Find all cart buttons
+	local cartButtons = {}
+	for _, child in ipairs(cartFrame:GetChildren()) do
+		if child:IsA("ImageButton") and child:HasTag("cart-button") then
+			table.insert(cartButtons, child)
+		end
+	end
+
+	-- Update each cart button
+	for _, button in ipairs(cartButtons) do
+		local cartId = button.Name -- Should match Constants.CART_ITEMS keys
+		local cartData = cartItems[cartId]
+
+		if cartData then
+			local price = cartData.price
+			local hasEnoughCash = playerCash >= price
+			local canAfford = hasEnoughCash
+
+			-- Update visual state
+			local imageLabel = button:FindFirstChild("ImageLabel")
+			local nameText = button:FindFirstChild("NameText")
+			local priceText = button:FindFirstChild("PriceText")
+			local descriptionText = button:FindFirstChild("DescriptionText")
+
+			local transparency = canAfford and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
+			local backgroundColor = AVAILABLE_COLOR
+			if not hasEnoughCash then
+				backgroundColor = UNAVAILABLE_COLOR
+			end
+
+			if imageLabel then
+				imageLabel.ImageTransparency = transparency
+			end
+			if nameText then
+				nameText.TextTransparency = transparency
+			end
+			if priceText then
+				priceText.TextTransparency = transparency
+			end
+			if descriptionText then
+				descriptionText.TextTransparency = transparency
+			end
+
+			button.BackgroundColor3 = backgroundColor
+
+			-- Store the enabled state for click handling
+			button:SetAttribute("Enabled", canAfford)
+
+			-- Update text content
+			if nameText then
+				nameText.Text = cartData.displayName
+			end
+			if priceText then
+				priceText.Text = "$" .. tostring(price)
+			end
+			if descriptionText then
+				descriptionText.Text = cartData.description
+			end
+		end
+	end
+end
+
+-- Function to show cart purchase error frame
+local function showCartErrorFrame(errorMessage)
+	local storeGui = playerGui:FindFirstChild("StoreGui")
+	if not storeGui then
+		return
+	end
+
+	local errorFrame = storeGui:FindFirstChild("Error")
+	if not errorFrame then
+		return
+	end
+
+	local dynamicText = errorFrame:FindFirstChild("DynamicText")
+	if dynamicText then
+		dynamicText.Text = errorMessage
+	end
+
+	errorFrame.Visible = true
+end
+
+-- Function to handle cart button clicks
+local function onCartButtonClicked(button)
+	local isEnabled = button:GetAttribute("Enabled")
+	if isEnabled then
+		-- Send cart ID to server (server will validate the purchase)
+		local cartId = button.Name
+
+		-- Call server to perform the purchase
+		local success, result = buyCartEvent:InvokeServer(cartId)
+
+		if success then
+			-- Purchase successful, update button states
+			updateCartButtonStates()
+		else
+			-- Show error message from server
+			showCartErrorFrame(result or "Purchase failed")
+		end
+	else
+		showCartErrorFrame("You cannot purchase this cart right now")
+	end
+end
+
 -- Function to handle sell button clicks
 local function onSellBlocksButtonClicked(button)
 	local isEnabled = button:GetAttribute("Enabled")
@@ -369,6 +502,8 @@ local function showShopFrame()
 		end
 		if shopFrame then
 			shopFrame.Visible = true
+			-- Update cart button states when shop frame becomes visible
+			updateCartButtonStates()
 		end
 	end
 end
@@ -468,6 +603,22 @@ openStoreEvent.OnClientEvent:Connect(function()
 			end
 		end
 
+		-- Connect cart button click events
+		local shopFrameConnect = storeGui:FindFirstChild("Shop")
+		if shopFrameConnect then
+			local cartFrame = shopFrameConnect:FindFirstChild("CartFrame")
+			if cartFrame then
+				-- Connect all cart buttons
+				for _, child in ipairs(cartFrame:GetChildren()) do
+					if child:IsA("ImageButton") and child:HasTag("cart-button") then
+						child.MouseButton1Click:Connect(function()
+							onCartButtonClicked(child)
+						end)
+					end
+				end
+			end
+		end
+
 		buttonsConnected = true
 	end
 
@@ -482,6 +633,18 @@ openStoreEvent.OnClientEvent:Connect(function()
 				if sellBlocksFrame and sellBlocksFrame.Visible then
 					updateSellButtonStates()
 				end
+			end
+		end
+	end)
+
+	-- Connect to Cash attribute changes to update cart button states
+	player:GetAttributeChangedSignal("Cash"):Connect(function()
+		-- Only update if Shop frame is currently visible
+		local storeGuiLocal = playerGui:FindFirstChild("StoreGui")
+		if storeGuiLocal and storeGuiLocal.Enabled then
+			local shopFrameLocal = storeGuiLocal:FindFirstChild("Shop")
+			if shopFrameLocal and shopFrameLocal.Visible then
+				updateCartButtonStates()
 			end
 		end
 	end)

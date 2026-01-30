@@ -14,6 +14,9 @@ local DataManager = require(game:GetService("ServerScriptService").DataManager)
 -- Get the sell blocks event
 local sellBlocksEvent = ReplicatedStorage:WaitForChild("SellBlocksEvent")
 
+-- Get the buy cart event
+local buyCartEvent = ReplicatedStorage:WaitForChild("BuyCartEvent")
+
 -- Configuration for valid sell transactions
 -- Key: button identifier (must match button.Name in the UI), Value: {blocksRequired, cashReward}
 -- IMPORTANT: Button names in the UI must exactly match these keys for transactions to work
@@ -84,6 +87,28 @@ local function onSellBlocks(player, buttonIdentifier)
 	end
 end
 
+-- Function to handle buying cart items
+local function onBuyCart(player, cartItemId)
+	if not player then
+		return false, "Player not found"
+	end
+
+	-- Validate that this is a valid cart item
+	local Constants = require(game:GetService("ReplicatedStorage").Constants)
+	if not Constants.CART_ITEMS[cartItemId] then
+		return false, "Invalid cart item"
+	end
+
+	-- Attempt to buy the cart item
+	local success, result = DataManager.buyCartItem(player, cartItemId)
+
+	if success then
+		return true, result -- result contains new wagon size
+	else
+		return false, result -- result contains error message
+	end
+end
+
 -- Function to reset cooldown when store is closed (called from client)
 local function onStoreClosed(player)
 	if player then
@@ -107,6 +132,9 @@ local function init()
 
 	-- Connect sell blocks function
 	sellBlocksEvent.OnServerInvoke = onSellBlocks
+
+	-- Connect buy cart function
+	buyCartEvent.OnServerInvoke = onBuyCart
 end
 
 return {

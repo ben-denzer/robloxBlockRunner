@@ -17,12 +17,19 @@ local dataStore = DataStoreService:GetDataStore(DATASTORE_NAME)
 -- Cache for player data (in-memory storage during session)
 local playerDataCache = {}
 
+-- Function to check if a value can be set as a player attribute (only simple types)
+local function canSetAsAttribute(value)
+	local valueType = type(value)
+	return valueType == "number" or valueType == "string" or valueType == "boolean"
+end
+
 -- Function to get default player data structure
 local function getDefaultPlayerData()
 	return {
 		BlockCount = 0,
 		Cash = 0,
 		WagonSize = Constants.DEFAULT_WAGON_SIZE,
+		Inventory = {}, -- Table of item IDs to quantities: {["Cart60"] = 1, ["Cart200"] = 0}
 		-- Add other persistent data fields here as needed
 		LastSave = os.time(),
 	}
@@ -135,8 +142,10 @@ local function updatePlayerData(player, key, value)
 	data[key] = value
 	playerDataCache[userId] = table.clone(data)
 
-	-- Update the player's attribute so client-side listeners work
-	player:SetAttribute(key, value)
+	-- Update the player's attribute so client-side listeners work (only for simple types)
+	if canSetAsAttribute(value) then
+		player:SetAttribute(key, value)
+	end
 
 	-- Data will be saved during periodic saves, player leave, or server shutdown
 	-- No immediate save to avoid excessive database calls during rapid gameplay
@@ -249,9 +258,9 @@ end
 local function onPlayerAdded(player)
 	local data = loadPlayerData(player)
 
-	-- Set initial attributes from loaded data
+	-- Set initial attributes from loaded data (only for simple types)
 	for key, value in pairs(data) do
-		if key ~= "LastSave" then -- Don't set LastSave as an attribute
+		if key ~= "LastSave" and canSetAsAttribute(value) then -- Don't set LastSave or complex types as attributes
 			player:SetAttribute(key, value)
 		end
 	end
@@ -273,6 +282,107 @@ local function onPlayerRemoving(player)
 		savePlayerData(player, data)
 		playerDataCache[userId] = nil
 	end
+end
+
+-- Function to check if player has an item in inventory
+-- Returns: hasItem (boolean), quantity (number)
+local function hasItemInInventory(player, itemId)
+	local data = getPlayerData(player)
+	local inventory = data.Inventory or {}
+	return inventory[itemId] and inventory[itemId] > 0, inventory[itemId] or 0
+end
+
+-- Function to add item to player inventory
+-- Returns: success (boolean), newQuantity (number)
+local function addItemToInventory(player, itemId, quantity)
+	local userId = tostring(player.UserId)
+	local data = getPlayerData(player)
+
+	data.Inventory = data.Inventory or {}
+	data.Inventory[itemId] = (data.Inventory[itemId] or 0) + quantity
+
+	playerDataCache[userId] = table.clone(data)
+
+	return true, data.Inventory[itemId]
+end
+
+-- Function to remove item from player inventory
+-- Returns: success (boolean), newQuantity (number)
+local function removeItemFromInventory(player, itemId, quantity)
+	local userId = tostring(player.UserId)
+	local data = getPlayerData(player)
+
+	data.Inventory = data.Inventory or {}
+
+	local currentQuantity = data.Inventory[itemId] or 0
+	if currentQuantity < quantity then
+		return false, currentQuantity
+	end
+
+	data.Inventory[itemId] = currentQuantity - quantity
+	playerDataCache[userId] = table.clone(data)
+
+	return true, data.Inventory[itemId]
+end
+
+-- Function to buy an item (checks cash, deducts cash, adds to inventory)
+-- Returns: success (boolean), errorMessage (string) or newQuantity (number)
+local function buyItem(player, itemId, price)
+	local data = getPlayerData(player)
+	local currentCash = data.Cash or 0
+
+	if currentCash < price then
+		return false, "Not enough cash"
+	end
+
+	-- Deduct cash
+	updatePlayerCash(player, currentCash - price)
+
+	-- Add item to inventory
+	local success, newQuantity = addItemToInventory(player, itemId, 1)
+
+	if success then
+		return true, newQuantity
+	else
+		-- Refund cash if inventory addition failed (shouldn't happen but safety check)
+		updatePlayerCash(player, currentCash)
+		return false, "Failed to add item to inventory"
+	end
+end
+
+-- Function to buy a cart item (checks if already owned, buys item, and upgrades wagon size)
+-- Returns: success (boolean), errorMessage (string) or newWagonSize (number)
+local function buyCartItem(player, itemId)
+	-- Check if player already owns this cart
+	local hasItem, quantity = hasItemInInventory(player, itemId)
+	if hasItem and quantity > 0 then
+		return false, "You already own this cart"
+	end
+
+	-- Get cart item details
+	local cartItem = Constants.CART_ITEMS[itemId]
+	if not cartItem then
+		return false, "Invalid cart item"
+	end
+
+	-- Attempt to buy the item
+	local success, result = buyItem(player, itemId, cartItem.price)
+	if not success then
+		return false, result -- result contains error message
+	end
+
+	-- Set wagon size directly
+	local newWagonSize = cartItem.wagonSize
+	updatePlayerData(player, "WagonSize", newWagonSize)
+
+	return true, newWagonSize
+end
+
+-- Function to get player's inventory
+-- Returns: inventory table (copy for safety)
+local function getPlayerInventory(player)
+	local data = getPlayerData(player)
+	return table.clone(data.Inventory or {})
 end
 
 -- Function to initialize the data manager
@@ -313,4 +423,10 @@ return {
 	savePlayerDataImmediately = savePlayerDataImmediately,
 	loadPlayerData = loadPlayerData,
 	getDefaultPlayerData = getDefaultPlayerData,
+	hasItemInInventory = hasItemInInventory,
+	addItemToInventory = addItemToInventory,
+	removeItemFromInventory = removeItemFromInventory,
+	buyItem = buyItem,
+	buyCartItem = buyCartItem,
+	getPlayerInventory = getPlayerInventory,
 }
