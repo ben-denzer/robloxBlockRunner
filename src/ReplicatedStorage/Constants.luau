@@ -130,4 +130,19 @@ return {
 			FAKE_FLOOR = "fake-floor",
 		},
 	},
+
+	-- Cash system configuration
+	CASH_SYSTEM = {
+		-- Default values
+		DEFAULT_CASH_COUNT = 100, -- Default cash amount per cash part
+
+		-- Distance thresholds
+		PLAYER_NEAR_RADIUS = 5, -- Radius to check for players near respawn positions (studs)
+
+		-- Tags
+		TAGS = {
+			CASH = "cash",
+			NO_RESPAWN = "no-respawn",
+		},
+	},
 }

@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local DataManager = require(game:GetService("ServerScriptService").DataManager)
+local Constants = require(game:GetService("ReplicatedStorage").Constants)
 
 -- Track recently collected cash to prevent double collection
 local recentlyCollected = {}
@@ -33,7 +34,7 @@ local function createCashFromTemplate(template)
 
 	-- Ensure Count attribute exists (default to 100 if missing)
 	if not newCash:GetAttribute("Count") then
-		newCash:SetAttribute("Count", 100)
+		newCash:SetAttribute("Count", Constants.CASH_SYSTEM.DEFAULT_CASH_COUNT)
 	end
 
 	-- Copy all stored children (decals, BillboardGui, etc.) to the new cash part
@@ -43,7 +44,7 @@ local function createCashFromTemplate(template)
 	end
 
 	-- Add the "cash" tag
-	CollectionService:AddTag(newCash, "cash")
+	CollectionService:AddTag(newCash, Constants.CASH_SYSTEM.TAGS.CASH)
 
 	-- Set properties for touch detection (no collision, only touch)
 	newCash.CanCollide = false
@@ -72,7 +73,7 @@ end
 -- Function to periodically try respawning stored cash
 local function tryRespawnStoredCash()
 	for storageId, template in pairs(respawnStorage) do
-		local playerNearby = isPlayerNearPosition(template.Position, 5)
+		local playerNearby = isPlayerNearPosition(template.Position, Constants.CASH_SYSTEM.PLAYER_NEAR_RADIUS)
 
 		if not playerNearby then
 			-- Safe to respawn now
@@ -98,7 +99,7 @@ local function onCashTouched(cashPart, hit)
 		local player = Players:GetPlayerFromCharacter(character)
 		if player then
 			-- Check if this cash has a no-respawn tag
-			if CollectionService:HasTag(cashPart, "no-respawn") then
+			if CollectionService:HasTag(cashPart, Constants.CASH_SYSTEM.TAGS.NO_RESPAWN) then
 				return -- Don't store template or respawn no-respawn items
 			end
 
@@ -110,11 +111,11 @@ local function onCashTouched(cashPart, hit)
 			nextCashId = nextCashId + 1
 
 			-- Get the count from the cash's attribute, default to 100
-			local count = cashPart:GetAttribute("Count") or 100
+			local count = cashPart:GetAttribute("Count") or Constants.CASH_SYSTEM.DEFAULT_CASH_COUNT
 
 			-- Ensure count is positive (handle edge case of negative values gracefully)
 			if count <= 0 then
-				count = 100
+				count = Constants.CASH_SYSTEM.DEFAULT_CASH_COUNT
 			end
 
 			-- Add cash to player (cash has unlimited capacity, unlike blocks)
@@ -158,7 +159,7 @@ local function onCashTouched(cashPart, hit)
 					return
 				end
 
-				local playerNearby = isPlayerNearPosition(template.Position, 5) -- 5 stud radius
+				local playerNearby = isPlayerNearPosition(template.Position, Constants.CASH_SYSTEM.PLAYER_NEAR_RADIUS)
 
 				if playerNearby and attemptNumber < 5 then -- Try up to 5 times (75 seconds total)
 					-- Wait 15 more seconds and try again
@@ -194,10 +195,10 @@ end
 -- Initialize cash system
 local function init()
 	-- Setup all existing cash parts
-	for _, cashPart in ipairs(CollectionService:GetTagged("cash")) do
+	for _, cashPart in ipairs(CollectionService:GetTagged(Constants.CASH_SYSTEM.TAGS.CASH)) do
 		-- Ensure Count attribute exists (default to 100 if missing)
 		if not cashPart:GetAttribute("Count") then
-			cashPart:SetAttribute("Count", 100)
+			cashPart:SetAttribute("Count", Constants.CASH_SYSTEM.DEFAULT_CASH_COUNT)
 		end
 
 		-- Ensure touch detection works (no collision, only touch)
@@ -210,10 +211,10 @@ local function init()
 	end
 
 	-- Listen for new cash parts being tagged
-	CollectionService:GetInstanceAddedSignal("cash"):Connect(function(cashPart)
+	CollectionService:GetInstanceAddedSignal(Constants.CASH_SYSTEM.TAGS.CASH):Connect(function(cashPart)
 		-- Ensure Count attribute exists (default to 100 if missing)
 		if not cashPart:GetAttribute("Count") then
-			cashPart:SetAttribute("Count", 100)
+			cashPart:SetAttribute("Count", Constants.CASH_SYSTEM.DEFAULT_CASH_COUNT)
 		end
 
 		-- Ensure touch detection works (no collision, only touch)
