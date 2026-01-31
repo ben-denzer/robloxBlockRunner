@@ -115,4 +115,19 @@ return {
 		SELL_50_BLOCKS = "Sell50BlocksButton",
 		SELL_100_BLOCKS = "Sell100BlocksButton",
 	},
+
+	-- Block system configuration
+	BLOCK_SYSTEM = {
+		-- Distance thresholds
+		PLAYER_NEAR_RADIUS = 5, -- Radius to check for players near respawn positions (studs)
+
+		-- Tags
+		TAGS = {
+			STEPPING_STONE = "stepping-stone",
+			TRACK = "track",
+			BLOCK = "block",
+			NO_RESPAWN = "no-respawn",
+			FAKE_FLOOR = "fake-floor",
+		},
+	},
 }

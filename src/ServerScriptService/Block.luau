@@ -28,7 +28,7 @@ local fakeFloorTouchDebounce = {}
 -- Function to check if a position is safe for block placement (no overlaps)
 local function isPositionSafeForBlock(position, blockSize)
 	-- Check for nearby stepping stones (prevent stacking)
-	local nearbySteppingStones = CollectionService:GetTagged("stepping-stone")
+	local nearbySteppingStones = CollectionService:GetTagged(Constants.BLOCK_SYSTEM.TAGS.STEPPING_STONE)
 	for _, existingStone in ipairs(nearbySteppingStones) do
 		local distance = (position - existingStone.Position).Magnitude
 		-- Ensure blocks don't overlap by keeping them at least their size apart
@@ -39,7 +39,7 @@ local function isPositionSafeForBlock(position, blockSize)
 	end
 
 	-- Don't place on or near track parts - use precise AABB overlap detection
-	local nearbyTracks = CollectionService:GetTagged("track")
+	local nearbyTracks = CollectionService:GetTagged(Constants.BLOCK_SYSTEM.TAGS.TRACK)
 	for _, trackPart in ipairs(nearbyTracks) do
 		-- Check if the block would overlap with the track using AABB (Axis-Aligned Bounding Box)
 		local trackMin = trackPart.Position - (trackPart.Size / 2)
@@ -219,7 +219,7 @@ local function placeBlockUnderPlayer(player, fakeFloorPart)
 	newBlock.Parent = workspace
 
 	-- Tag as stepping stone (not "block" to avoid interfering with collectible blocks)
-	CollectionService:AddTag(newBlock, "stepping-stone")
+	CollectionService:AddTag(newBlock, Constants.BLOCK_SYSTEM.TAGS.STEPPING_STONE)
 
 	-- Schedule block destruction after 5 seconds
 	task.delay(3, function()
@@ -314,7 +314,7 @@ local function createBlockFromTemplate(template)
 	end
 
 	-- Add the "block" tag
-	CollectionService:AddTag(newBlock, "block")
+	CollectionService:AddTag(newBlock, Constants.BLOCK_SYSTEM.TAGS.BLOCK)
 
 	-- Set properties in correct order for touch detection
 	-- Ensure CanCollide is true first (needed for touch detection)
@@ -349,7 +349,7 @@ end
 -- Function to periodically try respawning stored blocks
 local function tryRespawnStoredBlocks()
 	for storageId, template in pairs(respawnStorage) do
-		local playerNearby = isPlayerNearPosition(template.Position, 5)
+		local playerNearby = isPlayerNearPosition(template.Position, Constants.BLOCK_SYSTEM.PLAYER_NEAR_RADIUS)
 
 		if not playerNearby then
 			-- Safe to respawn now
@@ -375,7 +375,7 @@ local function onBlockTouched(block, hit)
 		local player = Players:GetPlayerFromCharacter(character)
 		if player then
 			-- Check if this block has a no-respawn tag
-			if CollectionService:HasTag(block, "no-respawn") then
+			if CollectionService:HasTag(block, Constants.BLOCK_SYSTEM.TAGS.NO_RESPAWN) then
 				return -- Don't store template or respawn no-respawn items
 			end
 
@@ -438,7 +438,7 @@ local function onBlockTouched(block, hit)
 					return
 				end
 
-				local playerNearby = isPlayerNearPosition(template.Position, 5) -- 5 stud radius
+				local playerNearby = isPlayerNearPosition(template.Position, Constants.BLOCK_SYSTEM.PLAYER_NEAR_RADIUS)
 
 				if playerNearby and attemptNumber < 5 then -- Try up to 5 times (75 seconds total)
 					-- Wait 15 more seconds and try again
@@ -489,7 +489,7 @@ local function init()
 	-- Players without blocks CANNOT stand on fake-floor (pass through)
 	PhysicsService:CollisionGroupSetCollidable("PlayersWithoutBlocks", "FakeFloor", false)
 	-- Setup all existing blocks
-	for _, block in ipairs(CollectionService:GetTagged("block")) do
+	for _, block in ipairs(CollectionService:GetTagged(Constants.BLOCK_SYSTEM.TAGS.BLOCK)) do
 		-- Ensure CanCollide is true first (needed for touch detection)
 		if not block.CanCollide then
 			block.CanCollide = true
@@ -508,7 +508,7 @@ local function init()
 	end
 
 	-- Listen for new blocks being tagged
-	CollectionService:GetInstanceAddedSignal("block"):Connect(function(block)
+	CollectionService:GetInstanceAddedSignal(Constants.BLOCK_SYSTEM.TAGS.BLOCK):Connect(function(block)
 		-- Ensure CanCollide is true first (needed for touch detection)
 		if not block.CanCollide then
 			block.CanCollide = true
@@ -550,7 +550,7 @@ local function init()
 	end)
 
 	-- Setup fake-floor parts
-	for _, fakeFloorPart in ipairs(CollectionService:GetTagged("fake-floor")) do
+	for _, fakeFloorPart in ipairs(CollectionService:GetTagged(Constants.BLOCK_SYSTEM.TAGS.FAKE_FLOOR)) do
 		if fakeFloorPart:IsA("BasePart") then
 			fakeFloorPart.CollisionGroup = "FakeFloor"
 			fakeFloorPart.CanCollide = true
@@ -562,7 +562,7 @@ local function init()
 	end
 
 	-- Listen for new fake-floor parts
-	CollectionService:GetInstanceAddedSignal("fake-floor"):Connect(function(fakeFloorPart)
+	CollectionService:GetInstanceAddedSignal(Constants.BLOCK_SYSTEM.TAGS.FAKE_FLOOR):Connect(function(fakeFloorPart)
 		if fakeFloorPart:IsA("BasePart") then
 			fakeFloorPart.CollisionGroup = "FakeFloor"
 			fakeFloorPart.CanCollide = true
