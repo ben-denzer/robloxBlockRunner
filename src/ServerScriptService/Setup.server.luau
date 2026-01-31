@@ -2,21 +2,22 @@
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 -- Initialize data persistence system
-local DataManager = require(game:GetService("ServerScriptService").DataManager)
+local DataManager = require(ServerScriptService.DataManager)
 DataManager.init()
 
 -- Initialize block system
-local BlockSystem = require(game:GetService("ServerScriptService").Block)
+local BlockSystem = require(ServerScriptService.Block)
 BlockSystem.init()
 
 -- Initialize cash system
-local CashSystem = require(game:GetService("ServerScriptService").Cash)
+local CashSystem = require(ServerScriptService.Cash)
 CashSystem.init()
 
 -- Initialize store system
-local StoreSystem = require(game:GetService("ServerScriptService").Store)
+local StoreSystem = require(ServerScriptService.Store)
 StoreSystem.init()
 
 -- Wait for the baseplate to exist (in case it's loaded after this script)

@@ -48,6 +48,7 @@ return {
 		},
 		ATTRIBUTES = {
 			BLOCKS_TO_TURN_IN = "BlocksToTurnIn",
+			PAYOUT = "Payout",
 			ENABLED = "Enabled",
 		},
 		TAGS = {

@@ -326,23 +326,120 @@ local function onCartButtonClicked(button)
 	end
 end
 
--- Function to handle sell button clicks
+-- Function to show confirmation screen for selling blocks
+local function showConfirmationScreen(button)
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
+	if not storeGui then
+		return
+	end
+
+	local confirmationFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.CONFIRMATION)
+	if not confirmationFrame then
+		return
+	end
+
+	-- Get transaction details from button
+	local blocksToTurnInValue = button:FindFirstChild(UI_ELEMENTS.ATTRIBUTES.BLOCKS_TO_TURN_IN)
+	local cashRewardValue = button:FindFirstChild(UI_ELEMENTS.ATTRIBUTES.PAYOUT)
+
+	if not blocksToTurnInValue or not cashRewardValue then
+		return
+	end
+
+	local blocksToSell = blocksToTurnInValue.Value
+	local cashReward = cashRewardValue.Value
+
+	-- Update confirmation text with transaction details
+	local dynamicText = confirmationFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.DYNAMIC_TEXT)
+	if dynamicText then
+		dynamicText.Text = string.format("Sell %d blocks for $%s?", blocksToSell, Utils.formatCash(cashReward))
+	end
+
+	-- Store the button for later use when confirming
+	confirmationFrame:SetAttribute("PendingButton", button.Name)
+
+	-- Create modal backdrop to block interaction with other UI
+	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
+	if sellFrame then
+		local modalBackdrop = sellFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.MODAL_BACKDROP)
+		if not modalBackdrop then
+			modalBackdrop = createModalBackdrop()
+			modalBackdrop.Parent = sellFrame
+			modalBackdrop.MouseButton1Click:Connect(function() end)
+		end
+		modalBackdrop.Visible = true
+	end
+
+	confirmationFrame.Visible = true
+end
+
+-- Function to hide confirmation screen
+local function hideConfirmationScreen()
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
+	if not storeGui then
+		return
+	end
+
+	local confirmationFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.CONFIRMATION)
+	if confirmationFrame then
+		confirmationFrame.Visible = false
+		confirmationFrame:SetAttribute("PendingButton", nil)
+	end
+
+	-- Hide modal backdrop to restore interaction
+	local sellFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SELL)
+	if sellFrame then
+		local modalBackdrop = sellFrame:FindFirstChild(UI_ELEMENTS.ELEMENTS.MODAL_BACKDROP)
+		if modalBackdrop then
+			modalBackdrop.Visible = false
+		end
+	end
+end
+
+-- Function to handle confirmation of block sale
+local function onConfirmSellBlocks()
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
+	if not storeGui then
+		return
+	end
+
+	local confirmationFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.CONFIRMATION)
+	if not confirmationFrame then
+		return
+	end
+
+	local buttonIdentifier = confirmationFrame:GetAttribute("PendingButton")
+	if not buttonIdentifier then
+		return
+	end
+
+	-- Hide confirmation screen first
+	hideConfirmationScreen()
+
+	-- Proceed with the actual sale
+	local success, result1, _ = sellBlocksEvent:InvokeServer(buttonIdentifier)
+
+	if success then
+		-- Transaction successful, update button states
+		updateSellButtonStates()
+	else
+		-- Show error message from server
+		showErrorFrame(result1 or "Transaction failed")
+	end
+end
+
+-- Function to handle canceling the block sale
+local function onCancelSellBlocks()
+	-- Simply hide the confirmation screen
+	hideConfirmationScreen()
+end
+
+-- Function to handle sell button clicks (now shows confirmation)
 local function onSellBlocksButtonClicked(button)
 	local isEnabled = button:GetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED)
 	if isEnabled then
-		-- Send button identifier to server (server will validate the transaction details)
-		local buttonIdentifier = button.Name
-
-		-- Call server to perform the transaction
-		local success, result1, _ = sellBlocksEvent:InvokeServer(buttonIdentifier)
-
-		if success then
-			-- Transaction successful, update button states
-			updateSellButtonStates()
-		else
-			-- Show error message from server
-			showErrorFrame(result1 or "Transaction failed")
-		end
+		-- Show confirmation screen instead of selling directly
+		showConfirmationScreen(button)
 	else
 		-- Show error frame for disabled button
 		showErrorFrame("You do not have enough blocks to complete this transaction")
@@ -591,6 +688,20 @@ openStoreEvent.OnClientEvent:Connect(function()
 			local cancelButton = errorFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.CANCEL)
 			if cancelButton then
 				cancelButton.MouseButton1Click:Connect(hideErrorFrame)
+			end
+		end
+
+		-- Connect confirmation frame buttons
+		local confirmationFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.CONFIRMATION)
+		if confirmationFrame then
+			local confirmButton = confirmationFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.CONFIRM)
+			local cancelButton = confirmationFrame:FindFirstChild(UI_ELEMENTS.BUTTONS.CANCEL)
+
+			if confirmButton then
+				confirmButton.MouseButton1Click:Connect(onConfirmSellBlocks)
+			end
+			if cancelButton then
+				cancelButton.MouseButton1Click:Connect(onCancelSellBlocks)
 			end
 		end
 
