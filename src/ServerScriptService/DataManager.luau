@@ -254,6 +254,32 @@ local function saveAllPlayerData()
 	end
 end
 
+-- Function to sync inventory ownership to client
+-- Only syncs items that are "owned" (quantity > 0) for ownership checking
+local function syncInventoryOwnershipToClient(player)
+	local data = getPlayerData(player)
+	local inventory = data.Inventory or {}
+
+	-- Create a simple table of owned item IDs (ignore quantities for ownership)
+	local ownedItems = {}
+	for itemId, quantity in pairs(inventory) do
+		if quantity > 0 then
+			ownedItems[itemId] = true
+		end
+	end
+
+	-- Serialize as JSON string for client attribute
+	local success, jsonString = pcall(function()
+		return game:GetService("HttpService"):JSONEncode(ownedItems)
+	end)
+
+	if success then
+		player:SetAttribute("OwnedItems", jsonString)
+	else
+		warn("Failed to serialize owned items for player " .. player.Name)
+	end
+end
+
 -- Function to handle player joining
 local function onPlayerAdded(player)
 	local data = loadPlayerData(player)
@@ -264,6 +290,9 @@ local function onPlayerAdded(player)
 			player:SetAttribute(key, value)
 		end
 	end
+
+	-- Sync inventory ownership to client for UI state management
+	syncInventoryOwnershipToClient(player)
 end
 
 -- Function to handle player leaving
@@ -303,6 +332,9 @@ local function addItemToInventory(player, itemId, quantity)
 
 	playerDataCache[userId] = table.clone(data)
 
+	-- Sync ownership changes to client
+	syncInventoryOwnershipToClient(player)
+
 	return true, data.Inventory[itemId]
 end
 
@@ -321,6 +353,9 @@ local function removeItemFromInventory(player, itemId, quantity)
 
 	data.Inventory[itemId] = currentQuantity - quantity
 	playerDataCache[userId] = table.clone(data)
+
+	-- Sync ownership changes to client
+	syncInventoryOwnershipToClient(player)
 
 	return true, data.Inventory[itemId]
 end
@@ -429,4 +464,5 @@ return {
 	buyItem = buyItem,
 	buyCartItem = buyCartItem,
 	getPlayerInventory = getPlayerInventory,
+	syncInventoryOwnershipToClient = syncInventoryOwnershipToClient,
 }

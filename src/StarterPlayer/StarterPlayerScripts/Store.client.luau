@@ -224,6 +224,20 @@ local function hideErrorFrame()
 	end
 end
 
+-- Function to get owned items from client attribute
+local function getOwnedItems()
+	local ownedItemsJson = player:GetAttribute("OwnedItems")
+	if ownedItemsJson then
+		local success, ownedItems = pcall(function()
+			return game:GetService("HttpService"):JSONDecode(ownedItemsJson)
+		end)
+		if success then
+			return ownedItems
+		end
+	end
+	return {}
+end
+
 -- Function to update cart button states based on ownership and cash
 local function updateCartButtonStates()
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
@@ -241,8 +255,9 @@ local function updateCartButtonStates()
 		return
 	end
 
-	-- Get player's current cash
+	-- Get player's current cash and owned items
 	local playerCash = player:GetAttribute("Cash") or 0
+	local ownedItems = getOwnedItems()
 
 	-- Get constants for cart items
 	local cartItems = Constants.CART_ITEMS
@@ -262,8 +277,10 @@ local function updateCartButtonStates()
 
 		if cartData then
 			local price = cartData.price
+
 			local hasEnoughCash = playerCash >= price
-			local canAfford = hasEnoughCash
+			local alreadyOwns = ownedItems[cartId] == true
+			local canPurchase = hasEnoughCash and not alreadyOwns
 
 			-- Update visual state
 			local imageLabel = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.IMAGE_LABEL)
@@ -271,7 +288,7 @@ local function updateCartButtonStates()
 			local priceText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.CASH_TEXT)
 			local descriptionText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.DESCRIPTION_TEXT)
 
-			local transparency = canAfford and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
+			local transparency = canPurchase and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
 
 			if imageLabel then
 				imageLabel.ImageTransparency = transparency
@@ -288,7 +305,7 @@ local function updateCartButtonStates()
 			end
 
 			-- Store the enabled state for click handling
-			button:SetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED, canAfford)
+			button:SetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED, canPurchase)
 
 			-- Update text content
 			if nameText then
@@ -385,7 +402,15 @@ local function onCartButtonClicked(button)
 		-- Show confirmation screen instead of buying directly
 		showConfirmationScreen(button, "buy")
 	else
-		showErrorFrame("You cannot purchase this cart right now")
+		-- Check why the button is disabled
+		local ownedItems = getOwnedItems()
+		local cartId = button.Name
+
+		if ownedItems[cartId] then
+			showErrorFrame("You already own this cart")
+		else
+			showErrorFrame("You cannot purchase this cart right now")
+		end
 	end
 end
 
@@ -785,6 +810,18 @@ openStoreEvent.OnClientEvent:Connect(function()
 
 	-- Connect to Cash attribute changes to update cart button states
 	player:GetAttributeChangedSignal("Cash"):Connect(function()
+		-- Only update if Shop frame is currently visible
+		local storeGuiLocal = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
+		if storeGuiLocal and storeGuiLocal.Enabled then
+			local shopFrameLocal = storeGuiLocal:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
+			if shopFrameLocal and shopFrameLocal.Visible then
+				updateCartButtonStates()
+			end
+		end
+	end)
+
+	-- Connect to OwnedItems attribute changes to update cart button states
+	player:GetAttributeChangedSignal("OwnedItems"):Connect(function()
 		-- Only update if Shop frame is currently visible
 		local storeGuiLocal = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
 		if storeGuiLocal and storeGuiLocal.Enabled then
