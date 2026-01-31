@@ -58,6 +58,9 @@ return {
 		STORAGE = {
 			TAB_STORAGE = "TabStorage",
 		},
+		ASSETS = {
+			OWNED_ITEM_IMAGE = "rbxassetid://115063685134455",
+		},
 	},
 
 	-- Cart items available for purchase

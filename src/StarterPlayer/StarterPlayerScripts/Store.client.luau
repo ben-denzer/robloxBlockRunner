@@ -292,7 +292,7 @@ local function updateCartButtonStates()
 
 			if imageLabel then
 				imageLabel.ImageTransparency = transparency
-				imageLabel.Image = cartData.image
+				imageLabel.Image = alreadyOwns and UI_ELEMENTS.ASSETS.OWNED_ITEM_IMAGE or cartData.image
 			end
 			if nameText then
 				nameText.TextTransparency = transparency
