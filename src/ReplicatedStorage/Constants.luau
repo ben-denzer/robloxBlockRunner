@@ -8,6 +8,8 @@ return {
 	UI_ELEMENTS = {
 		GUI = {
 			STORE = "StoreGui",
+			SCOREBOARD = "ScoreboardGui",
+			START_MENU = "StartMenuGui",
 		},
 		FRAMES = {
 			BUY_OR_SELL = "BuyOrSell",
@@ -19,6 +21,8 @@ return {
 			SELL_BLOCKS = "SellBlocksFrame",
 			SELL_INVENTORY = "SellInventoryFrame",
 			BUY_CARTS = "BuyCartsFrame",
+			SCOREBOARD = "Scoreboard",
+			START_MENU = "StartMenu",
 		},
 		BUTTONS = {
 			CLOSE = "CloseButton",
@@ -29,6 +33,7 @@ return {
 			SHOP = "ShopButton",
 			BLOCKS_TAB = "BlocksTab",
 			INVENTORY_TAB = "InventoryTab",
+			START = "Start Button",
 		},
 		ELEMENTS = {
 			IMAGE_LABEL = "ImageLabel",
@@ -38,6 +43,8 @@ return {
 			DESCRIPTION_TEXT = "DescriptionText",
 			DYNAMIC_TEXT = "DynamicText",
 			MODAL_BACKDROP = "ModalBackdrop",
+			BLOCK_COUNT = "BlockCount",
+			CASH_COUNT = "CashCount",
 		},
 		ATTRIBUTES = {
 			BLOCKS_TO_TURN_IN = "BlocksToTurnIn",
@@ -83,6 +90,8 @@ return {
 	WORLD_OBJECTS = {
 		STORE = "Store",
 		CASHIER_TRIGGER = "CashierTrigger",
+		TRACK_1 = "Track1",
+		TRACK_1_SPAWN = "Track1Spawn",
 	},
 
 	-- Remote events
@@ -97,6 +106,7 @@ return {
 	PLAYER_ATTRIBUTES = {
 		BLOCK_COUNT = "BlockCount",
 		CASH = "Cash",
+		WAGON_SIZE = "WagonSize",
 	},
 
 	-- Transaction identifiers (must match button names in UI)
