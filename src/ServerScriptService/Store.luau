@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
 
 -- Ensure the module is loaded first (creates the event)
@@ -123,11 +124,20 @@ end
 
 -- Initialize store system
 local function init()
-	-- Setup cashier trigger
-	local cashierTrigger =
-		workspace:WaitForChild(Constants.WORLD_OBJECTS.STORE):WaitForChild(Constants.WORLD_OBJECTS.CASHIER_TRIGGER)
-	cashierTrigger.Touched:Connect(function(hit)
-		onCashierTriggerTouched(cashierTrigger, hit)
+	-- Setup all cashier triggers using tags
+	local cashierTriggers = CollectionService:GetTagged(Constants.STORE_SYSTEM.TAGS.CASHIER_TRIGGER)
+
+	for _, cashierTrigger in ipairs(cashierTriggers) do
+		cashierTrigger.Touched:Connect(function(hit)
+			onCashierTriggerTouched(cashierTrigger, hit)
+		end)
+	end
+
+	-- Also listen for new cashier triggers that might be added later
+	CollectionService:GetInstanceAddedSignal(Constants.STORE_SYSTEM.TAGS.CASHIER_TRIGGER):Connect(function(cashierTrigger)
+		cashierTrigger.Touched:Connect(function(hit)
+			onCashierTriggerTouched(cashierTrigger, hit)
+		end)
 	end)
 
 	-- Connect close store event

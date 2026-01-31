@@ -149,4 +149,13 @@ return {
 			NO_RESPAWN = "no-respawn",
 		},
 	},
+
+	-- Store system configuration
+	STORE_SYSTEM = {
+		-- Tags
+		TAGS = {
+			STORE = "store",
+			CASHIER_TRIGGER = "cashier-trigger",
+		},
+	},
 }
