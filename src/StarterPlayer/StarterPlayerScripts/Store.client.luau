@@ -105,6 +105,9 @@ local function updateSellButtonStates()
 	-- Get player's current block count
 	local playerBlockCount = player:GetAttribute("BlockCount") or 0
 
+	-- Get sell blocks transactions from constants
+	local sellBlocksTransactions = Constants.SELL_BLOCKS_TRANSACTIONS
+
 	-- Find all buttons tagged "sell-blocks-button"
 	local sellButtons = {}
 	for _, child in ipairs(sellBlocksFrame:GetChildren()) do
@@ -115,9 +118,9 @@ local function updateSellButtonStates()
 
 	-- Update each button's state
 	for _, button in ipairs(sellButtons) do
-		local blocksToTurnInValue = button:FindFirstChild(UI_ELEMENTS.ATTRIBUTES.BLOCKS_TO_TURN_IN)
-		if blocksToTurnInValue and blocksToTurnInValue:IsA("NumberValue") then
-			local blocksRequired = blocksToTurnInValue.Value
+		local transactionData = sellBlocksTransactions[button.Name]
+		if transactionData then
+			local blocksRequired = transactionData.blocks
 			local hasEnoughBlocks = playerBlockCount >= blocksRequired
 
 			-- Update visual state
@@ -132,9 +135,11 @@ local function updateSellButtonStates()
 			end
 			if blocksText then
 				blocksText.TextTransparency = transparency
+				blocksText.Text = tostring(blocksRequired) .. " Blocks"
 			end
 			if cashText then
 				cashText.TextTransparency = transparency
+				cashText.Text = "$" .. Utils.formatCash(transactionData.cash)
 			end
 
 			-- Store the enabled state for click handling
@@ -341,15 +346,14 @@ local function showConfirmationScreen(button, transactionType)
 	-- Update confirmation text based on transaction type
 	if transactionType == "sell" then
 		-- Handle selling blocks
-		local blocksToTurnInValue = button:FindFirstChild(UI_ELEMENTS.ATTRIBUTES.BLOCKS_TO_TURN_IN)
-		local cashRewardValue = button:FindFirstChild(UI_ELEMENTS.ATTRIBUTES.PAYOUT)
+		local transactionData = Constants.SELL_BLOCKS_TRANSACTIONS[button.Name]
 
-		if not blocksToTurnInValue or not cashRewardValue then
+		if not transactionData then
 			return
 		end
 
-		local blocksToSell = blocksToTurnInValue.Value
-		local cashReward = cashRewardValue.Value
+		local blocksToSell = transactionData.blocks
+		local cashReward = transactionData.cash
 
 		dynamicText.Text = string.format("Sell %d blocks for $%s?", blocksToSell, Utils.formatCash(cashReward))
 	elseif transactionType == "buy" then
