@@ -20,15 +20,7 @@ local sellBlocksEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.SELL_BLO
 -- Get the buy cart event
 local buyCartEvent = ReplicatedStorage:WaitForChild(Constants.EVENTS.BUY_CART)
 
--- Configuration for valid sell transactions
--- Key: button identifier (must match button.Name in the UI), Value: {blocksRequired, cashReward}
--- IMPORTANT: Button names in the UI must exactly match these keys for transactions to work
-local SELL_BLOCKS_TRANSACTIONS = {
-	[Constants.TRANSACTIONS.SELL_10_BLOCKS] = { blocks = 10, cash = 10000 },
-	[Constants.TRANSACTIONS.SELL_50_BLOCKS] = { blocks = 50, cash = 75000 },
-	[Constants.TRANSACTIONS.SELL_100_BLOCKS] = { blocks = 100, cash = 200000 },
-	-- Add more transactions as needed - ensure button names in UI match these keys
-}
+-- Configuration for valid sell transactions is now in Constants.SELL_BLOCKS_TRANSACTIONS
 
 -- Track which players can trigger the store (prevents spam after closing)
 local playerCooldowns = {}
@@ -64,7 +56,7 @@ local function onSellBlocks(player, buttonIdentifier)
 	end
 
 	-- Look up the transaction details from our authoritative configuration
-	local transaction = SELL_BLOCKS_TRANSACTIONS[buttonIdentifier]
+	local transaction = Constants.SELL_BLOCKS_TRANSACTIONS[buttonIdentifier]
 	if not transaction then
 		return false, "Invalid transaction"
 	end
@@ -134,11 +126,12 @@ local function init()
 	end
 
 	-- Also listen for new cashier triggers that might be added later
-	CollectionService:GetInstanceAddedSignal(Constants.STORE_SYSTEM.TAGS.CASHIER_TRIGGER):Connect(function(cashierTrigger)
-		cashierTrigger.Touched:Connect(function(hit)
-			onCashierTriggerTouched(cashierTrigger, hit)
+	CollectionService:GetInstanceAddedSignal(Constants.STORE_SYSTEM.TAGS.CASHIER_TRIGGER)
+		:Connect(function(cashierTrigger)
+			cashierTrigger.Touched:Connect(function(hit)
+				onCashierTriggerTouched(cashierTrigger, hit)
+			end)
 		end)
-	end)
 
 	-- Connect close store event
 	closeStoreEvent.OnServerEvent:Connect(onStoreClosed)

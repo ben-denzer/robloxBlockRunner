@@ -90,6 +90,15 @@ return {
 		},
 	},
 
+	-- Block selling transactions
+	-- Each transaction sets blocks required and cash reward
+	SELL_BLOCKS_TRANSACTIONS = {
+		["Sell10BlocksButton"] = { blocks = 10, cash = 10000 },
+		["Sell50BlocksButton"] = { blocks = 50, cash = 75000 },
+		["Sell100BlocksButton"] = { blocks = 100, cash = 200000 },
+		-- Add more transactions as needed - ensure button names in UI match these keys
+	},
+
 	-- World objects and locations
 	WORLD_OBJECTS = {
 		STORE = "Store",
