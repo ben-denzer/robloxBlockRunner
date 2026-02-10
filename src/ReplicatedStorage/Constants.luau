@@ -20,7 +20,8 @@ return {
 			TABS = "Tabs",
 			SELL_BLOCKS = "SellBlocksFrame",
 			SELL_INVENTORY = "SellInventoryFrame",
-			BUY_CARTS = "BuyCartsFrame",
+			BUY_TOOLS = "BuyToolsFrame",
+			BUY_PETS = "BuyPetsFrame",
 			SCOREBOARD = "Scoreboard",
 			START_MENU = "StartMenu",
 		},
@@ -33,6 +34,8 @@ return {
 			SHOP = "ShopButton",
 			BLOCKS_TAB = "BlocksTab",
 			INVENTORY_TAB = "InventoryTab",
+			TOOLS_TAB = "ToolsTab",
+			PETS_TAB = "PetsTab",
 			START = "Start Button",
 		},
 		ELEMENTS = {
