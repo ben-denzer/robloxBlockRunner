@@ -280,16 +280,57 @@ local function syncInventoryOwnershipToClient(player)
 	end
 end
 
+-- Function to apply jump power to a humanoid
+local function applyJumpPowerToHumanoid(humanoid, jumpPower)
+	humanoid.UseJumpPower = true -- Always use JumpPower system
+	humanoid.JumpPower = jumpPower -- 0 = no jumping, >0 = jumping with that power
+end
+
 -- Function to handle player joining
 local function onPlayerAdded(player)
 	local data = loadPlayerData(player)
 
 	-- Set initial attributes from loaded data (only for simple types)
+	-- Skip JumpPower for now - we'll handle it separately
 	for key, value in pairs(data) do
-		if key ~= "LastSave" and canSetAsAttribute(value) then -- Don't set LastSave or complex types as attributes
+		if key ~= "LastSave" and key ~= "JumpPower" and canSetAsAttribute(value) then
 			player:SetAttribute(key, value)
 		end
 	end
+
+	-- Determine the correct jump power (0 by default, or purchased amount)
+	local correctJumpPower = data.JumpPower or 0
+	player:SetAttribute("JumpPower", correctJumpPower)
+
+	-- Apply jump power to character if it exists
+	local character = player.Character
+	if character then
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			applyJumpPowerToHumanoid(humanoid, correctJumpPower)
+		end
+	end
+
+	-- Listen for character respawns to apply jump power
+	player.CharacterAdded:Connect(function(newCharacter)
+		local humanoid = newCharacter:WaitForChild("Humanoid", 5)
+		if humanoid then
+			local currentJumpPower = player:GetAttribute("JumpPower") or 0
+			applyJumpPowerToHumanoid(humanoid, currentJumpPower)
+		end
+	end)
+
+	-- Listen for JumpPower attribute changes to apply to character
+	player:GetAttributeChangedSignal("JumpPower"):Connect(function()
+		local currentCharacter = player.Character
+		if currentCharacter then
+			local humanoid = currentCharacter:FindFirstChild("Humanoid")
+			if humanoid then
+				local currentJumpPower = player:GetAttribute("JumpPower") or 0
+				applyJumpPowerToHumanoid(humanoid, currentJumpPower)
+			end
+		end
+	end)
 
 	-- Sync inventory ownership to client for UI state management
 	syncInventoryOwnershipToClient(player)
@@ -416,6 +457,16 @@ local function buyCartItem(player, itemId)
 		-- This is a gravity coil
 		local newJumpPower = itemData.jumpPower
 		updatePlayerData(player, "JumpPower", newJumpPower)
+
+		-- Immediately apply to current character if it exists
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChild("Humanoid")
+			if humanoid then
+				applyJumpPowerToHumanoid(humanoid, newJumpPower)
+			end
+		end
+
 		return true, newJumpPower
 	else
 		return false, "Item has no valid property"

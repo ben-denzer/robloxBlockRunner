@@ -101,16 +101,16 @@ return {
 		GRAVITY_COILS = {
 			["BuyGravityCoilButton"] = {
 				price = 4000000,
-				jumpPower = 7,
+				jumpPower = 50,
 				displayName = "Gravity Coil",
-				description = "4x Jump Power",
+				description = "Jump to save bricks while running",
 				image = "rbxassetid://102629918562918",
 			},
 			["BuySuperGravityCoilButton"] = {
 				price = 10000000,
-				jumpPower = 20,
+				jumpPower = 90,
 				displayName = "Super Gravity Coil",
-				description = "10x Jump Power",
+				description = "4x jump power over normal gravity coils",
 				image = "rbxassetid://140234918622988",
 			},
 		},

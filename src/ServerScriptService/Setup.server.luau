@@ -20,6 +20,10 @@ CashSystem.init()
 local StoreSystem = require(ServerScriptService.Store)
 StoreSystem.init()
 
+-- Initialize jump validation system
+local JumpValidator = require(ServerScriptService.JumpValidator)
+JumpValidator.init()
+
 -- Wait for the baseplate to exist (in case it's loaded after this script)
 local baseplate = Workspace:WaitForChild("Baseplate")
 
