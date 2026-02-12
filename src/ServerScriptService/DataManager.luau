@@ -388,29 +388,38 @@ end
 -- Function to buy a cart item (checks if already owned, buys item, and upgrades wagon size)
 -- Returns: success (boolean), errorMessage (string) or newWagonSize (number)
 local function buyCartItem(player, itemId)
-	-- Check if player already owns this cart
+	-- Check if player already owns this item
 	local hasItem, quantity = hasItemInInventory(player, itemId)
 	if hasItem and quantity > 0 then
-		return false, "You already own this cart"
+		return false, "You already own this item"
 	end
 
-	-- Get cart item details
-	local cartItem = Constants.CART_ITEMS[itemId]
-	if not cartItem then
-		return false, "Invalid cart item"
+	-- Get item details (cart or gravity coil)
+	local itemData = Constants.TOOLS.CART_ITEMS[itemId] or Constants.TOOLS.GRAVITY_COILS[itemId]
+	if not itemData then
+		return false, "Invalid item"
 	end
 
 	-- Attempt to buy the item
-	local success, result = buyItem(player, itemId, cartItem.price)
+	local success, result = buyItem(player, itemId, itemData.price)
 	if not success then
 		return false, result -- result contains error message
 	end
 
-	-- Set wagon size directly
-	local newWagonSize = cartItem.wagonSize
-	updatePlayerData(player, "WagonSize", newWagonSize)
-
-	return true, newWagonSize
+	-- Set appropriate attribute based on item type
+	if itemData.wagonSize then
+		-- This is a cart item
+		local newWagonSize = itemData.wagonSize
+		updatePlayerData(player, "WagonSize", newWagonSize)
+		return true, newWagonSize
+	elseif itemData.jumpPower then
+		-- This is a gravity coil
+		local newJumpPower = itemData.jumpPower
+		updatePlayerData(player, "JumpPower", newJumpPower)
+		return true, newJumpPower
+	else
+		return false, "Item has no valid property"
+	end
 end
 
 -- Function to get player's inventory

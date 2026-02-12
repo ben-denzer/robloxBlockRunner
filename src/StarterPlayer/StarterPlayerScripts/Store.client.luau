@@ -233,7 +233,7 @@ local function updateCartButtonStates()
 	local ownedItems = getOwnedItems()
 
 	-- Get constants for cart items
-	local cartItems = Constants.CART_ITEMS
+	local cartItems = Constants.TOOLS.CART_ITEMS
 
 	-- Find all cart buttons
 	local cartButtons = {}
@@ -245,7 +245,7 @@ local function updateCartButtonStates()
 
 	-- Update each cart button
 	for _, button in ipairs(cartButtons) do
-		local cartId = button.Name -- Should match Constants.CART_ITEMS keys
+		local cartId = button.Name -- Should match Constants.TOOLS.CART_ITEMS keys
 		local cartData = cartItems[cartId]
 
 		if cartData then
@@ -294,6 +294,89 @@ local function updateCartButtonStates()
 	end
 end
 
+-- Function to update gravity coil button states based on ownership and cash
+local function updateGravityCoilButtonStates()
+	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
+	if not storeGui then
+		return
+	end
+
+	local shopFrame = storeGui:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
+	if not shopFrame then
+		return
+	end
+
+	local cartFrame = shopFrame:FindFirstChild(UI_ELEMENTS.FRAMES.BUY_TOOLS)
+	if not cartFrame then
+		return
+	end
+
+	-- Get player's current cash and owned items
+	local playerCash = player:GetAttribute("Cash") or 0
+	local ownedItems = getOwnedItems()
+
+	-- Get constants for gravity coil items
+	local gravityCoilItems = Constants.TOOLS.GRAVITY_COILS
+
+	-- Find all gravity coil buttons
+	local gravityCoilButtons = {}
+	for _, child in ipairs(cartFrame:GetChildren()) do
+		if child:IsA("ImageButton") and child:HasTag(UI_ELEMENTS.TAGS.BUY_GRAVITY_COIL_BUTTON) then
+			table.insert(gravityCoilButtons, child)
+		end
+	end
+
+	-- Update each gravity coil button
+	for _, button in ipairs(gravityCoilButtons) do
+		local coilId = button.Name -- Should match Constants.TOOLS.GRAVITY_COILS keys
+		local coilData = gravityCoilItems[coilId]
+
+		if coilData then
+			local price = coilData.price
+
+			local hasEnoughCash = playerCash >= price
+			local alreadyOwns = ownedItems[coilId] == true
+			local canPurchase = hasEnoughCash and not alreadyOwns
+
+			-- Update visual state
+			local imageLabel = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.IMAGE_LABEL)
+			local nameText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.NAME_TEXT)
+			local priceText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.CASH_TEXT)
+			local descriptionText = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.DESCRIPTION_TEXT)
+
+			local transparency = canPurchase and ENABLED_TRANSPARENCY or DISABLED_TRANSPARENCY
+
+			if imageLabel then
+				imageLabel.ImageTransparency = transparency
+				imageLabel.Image = alreadyOwns and UI_ELEMENTS.ASSETS.OWNED_ITEM_IMAGE or coilData.image
+			end
+			if nameText then
+				nameText.TextTransparency = transparency
+			end
+			if priceText then
+				priceText.TextTransparency = transparency
+			end
+			if descriptionText then
+				descriptionText.TextTransparency = transparency
+			end
+
+			-- Store the enabled state for click handling
+			button:SetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED, canPurchase)
+
+			-- Update text content
+			if nameText then
+				nameText.Text = coilData.displayName
+			end
+			if priceText then
+				priceText.Text = "$" .. Utils.formatCash(price)
+			end
+			if descriptionText then
+				descriptionText.Text = coilData.description
+			end
+		end
+	end
+end
+
 -- Function to show confirmation screen for transactions (buying or selling)
 local function showConfirmationScreen(button, transactionType)
 	local storeGui = playerGui:FindFirstChild(UI_ELEMENTS.GUI.STORE)
@@ -325,16 +408,16 @@ local function showConfirmationScreen(button, transactionType)
 
 		dynamicText.Text = string.format("Sell %d blocks for $%s?", blocksToSell, Utils.formatCash(cashReward))
 	elseif transactionType == "buy" then
-		-- Handle buying items (carts, etc.)
+		-- Handle buying items (carts, gravity coils, etc.)
 		local itemName = button.Name
-		local cartData = Constants.CART_ITEMS[itemName]
+		local itemData = Constants.TOOLS.CART_ITEMS[itemName] or Constants.TOOLS.GRAVITY_COILS[itemName]
 
-		if not cartData then
+		if not itemData then
 			return
 		end
 
-		local price = cartData.price
-		local displayName = cartData.displayName
+		local price = itemData.price
+		local displayName = itemData.displayName
 
 		dynamicText.Text = string.format("Purchase %s for $%s?", displayName, Utils.formatCash(price))
 	else
@@ -382,6 +465,25 @@ local function onCartButtonClicked(button)
 			showErrorFrame("You already own this cart")
 		else
 			showErrorFrame("You cannot purchase this cart right now")
+		end
+	end
+end
+
+-- Function to handle gravity coil button clicks (shows confirmation or error)
+local function onGravityCoilButtonClicked(button)
+	local isEnabled = button:GetAttribute(UI_ELEMENTS.ATTRIBUTES.ENABLED)
+	if isEnabled then
+		-- Show confirmation screen instead of buying directly
+		showConfirmationScreen(button, "buy")
+	else
+		-- Check why the button is disabled
+		local ownedItems = getOwnedItems()
+		local coilId = button.Name
+
+		if ownedItems[coilId] then
+			showErrorFrame("You already own this gravity coil")
+		else
+			showErrorFrame("You cannot purchase this gravity coil right now")
 		end
 	end
 end
@@ -459,6 +561,7 @@ local function onConfirmTransaction()
 		if success then
 			-- Purchase successful, update button states
 			updateCartButtonStates()
+			updateGravityCoilButtonStates()
 		else
 			-- Show error message from server
 			showErrorFrame(result or "Purchase failed")
@@ -518,7 +621,10 @@ openStoreEvent.OnClientEvent:Connect(function()
 
 			if shopButton then
 				shopButton.MouseButton1Click:Connect(function()
-					StoreUIManager.showShopFrame(updateCartButtonStates)
+					StoreUIManager.showShopFrame(function()
+						updateCartButtonStates()
+						updateGravityCoilButtonStates()
+					end)
 				end)
 			end
 		end
@@ -593,6 +699,15 @@ openStoreEvent.OnClientEvent:Connect(function()
 						end)
 					end
 				end
+
+				-- Connect all gravity coil buttons
+				for _, child in ipairs(cartFrame:GetChildren()) do
+					if child:IsA("ImageButton") and child:HasTag(UI_ELEMENTS.TAGS.BUY_GRAVITY_COIL_BUTTON) then
+						child.MouseButton1Click:Connect(function()
+							onGravityCoilButtonClicked(child)
+						end)
+					end
+				end
 			end
 		end
 
@@ -622,6 +737,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 			local shopFrameLocal = storeGuiLocal:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 			if shopFrameLocal and shopFrameLocal.Visible then
 				updateCartButtonStates()
+				updateGravityCoilButtonStates()
 			end
 		end
 	end)
@@ -634,6 +750,7 @@ openStoreEvent.OnClientEvent:Connect(function()
 			local shopFrameLocal = storeGuiLocal:FindFirstChild(UI_ELEMENTS.FRAMES.SHOP)
 			if shopFrameLocal and shopFrameLocal.Visible then
 				updateCartButtonStates()
+				updateGravityCoilButtonStates()
 			end
 		end
 	end)

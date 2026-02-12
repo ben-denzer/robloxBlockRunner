@@ -89,9 +89,9 @@ local function onBuyCart(player, cartItemId)
 		return false, "Player not found"
 	end
 
-	-- Validate that this is a valid cart item
-	if not Constants.CART_ITEMS[cartItemId] then
-		return false, "Invalid cart item"
+	-- Validate that this is a valid cart item or gravity coil
+	if not Constants.TOOLS.CART_ITEMS[cartItemId] and not Constants.TOOLS.GRAVITY_COILS[cartItemId] then
+		return false, "Invalid item"
 	end
 
 	-- Attempt to buy the cart item

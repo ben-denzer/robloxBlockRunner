@@ -57,6 +57,7 @@ return {
 		TAGS = {
 			SELL_BLOCKS_BUTTON = "sell-blocks-button",
 			BUY_CART_BUTTON = "buy-cart-button",
+			BUY_GRAVITY_COIL_BUTTON = "buy-gravity-coil-button",
 		},
 		STORAGE = {
 			TAB_STORAGE = "TabStorage",
@@ -66,30 +67,52 @@ return {
 		},
 	},
 
-	-- Cart items available for purchase
-	-- Each cart sets wagon capacity directly and costs cash
-	CART_ITEMS = {
-		["BuyCart60Button"] = {
-			-- price = 100000,
-			price = 5000,
-			wagonSize = 60,
-			displayName = "Small Cart",
-			description = "Holds up to 60 blocks",
-			image = "rbxassetid://128450464031364",
+	-- Tools available for purchase
+	TOOLS = {
+		-- Cart items available for purchase
+		-- Each cart sets wagon capacity directly and costs cash
+		CART_ITEMS = {
+			["BuyCart60Button"] = {
+				-- price = 100000,
+				price = 5000,
+				wagonSize = 60,
+				displayName = "Small Cart",
+				description = "Holds up to 60 blocks",
+				image = "rbxassetid://128450464031364",
+			},
+			["BuyCart200Button"] = {
+				price = 500000,
+				wagonSize = 200,
+				displayName = "Large Cart",
+				description = "Holds up to 200 blocks",
+				image = "rbxassetid://117181843097820",
+			},
+			["BuyCart600Button"] = {
+				price = 2000000,
+				wagonSize = 600,
+				displayName = "Huge Cart",
+				description = "Holds up to 600 blocks",
+				image = "rbxassetid://107001388860949",
+			},
 		},
-		["BuyCart200Button"] = {
-			price = 500000,
-			wagonSize = 200,
-			displayName = "Large Cart",
-			description = "Holds up to 200 blocks",
-			image = "rbxassetid://117181843097820",
-		},
-		["BuyCart600Button"] = {
-			price = 2000000,
-			wagonSize = 600,
-			displayName = "Huge Cart",
-			description = "Holds up to 600 blocks",
-			image = "rbxassetid://107001388860949",
+
+		-- Gravity coils available for purchase
+		-- Each gravity coil provides jump power enhancement and costs cash
+		GRAVITY_COILS = {
+			["BuyGravityCoilButton"] = {
+				price = 4000000,
+				jumpPower = 7,
+				displayName = "Gravity Coil",
+				description = "4x Jump Power",
+				image = "rbxassetid://102629918562918",
+			},
+			["BuySuperGravityCoilButton"] = {
+				price = 10000000,
+				jumpPower = 20,
+				displayName = "Super Gravity Coil",
+				description = "10x Jump Power",
+				image = "rbxassetid://140234918622988",
+			},
 		},
 	},
 
@@ -123,6 +146,7 @@ return {
 		BLOCK_COUNT = "BlockCount",
 		CASH = "Cash",
 		WAGON_SIZE = "WagonSize",
+		JUMP_POWER = "JumpPower",
 	},
 
 	-- Transaction identifiers (must match button names in UI)
