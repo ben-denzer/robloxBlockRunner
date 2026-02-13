@@ -250,10 +250,21 @@ local function updateCartButtonStates()
 
 		if cartData then
 			local price = cartData.price
+			local prerequisites = cartData.prerequisites or {}
 
 			local hasEnoughCash = playerCash >= price
 			local alreadyOwns = ownedItems[cartId] == true
-			local canPurchase = hasEnoughCash and not alreadyOwns
+
+			-- Check if all prerequisites are met
+			local meetsPrerequisites = true
+			for _, prereqId in ipairs(prerequisites) do
+				if not ownedItems[prereqId] then
+					meetsPrerequisites = false
+					break
+				end
+			end
+
+			local canPurchase = hasEnoughCash and not alreadyOwns and meetsPrerequisites
 
 			-- Update visual state
 			local imageLabel = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.IMAGE_LABEL)
@@ -333,10 +344,21 @@ local function updateGravityCoilButtonStates()
 
 		if coilData then
 			local price = coilData.price
+			local prerequisites = coilData.prerequisites or {}
 
 			local hasEnoughCash = playerCash >= price
 			local alreadyOwns = ownedItems[coilId] == true
-			local canPurchase = hasEnoughCash and not alreadyOwns
+
+			-- Check if all prerequisites are met
+			local meetsPrerequisites = true
+			for _, prereqId in ipairs(prerequisites) do
+				if not ownedItems[prereqId] then
+					meetsPrerequisites = false
+					break
+				end
+			end
+
+			local canPurchase = hasEnoughCash and not alreadyOwns and meetsPrerequisites
 
 			-- Update visual state
 			local imageLabel = button:FindFirstChild(UI_ELEMENTS.ELEMENTS.IMAGE_LABEL)
@@ -460,11 +482,25 @@ local function onCartButtonClicked(button)
 		-- Check why the button is disabled
 		local ownedItems = getOwnedItems()
 		local cartId = button.Name
+		local cartData = Constants.TOOLS.CART_ITEMS[cartId]
 
 		if ownedItems[cartId] then
 			showErrorFrame("You already own this cart")
-		else
+		elseif cartData then
+			-- Check prerequisites
+			local prerequisites = cartData.prerequisites or {}
+			for _, prereqId in ipairs(prerequisites) do
+				if not ownedItems[prereqId] then
+					local prereqData = Constants.TOOLS.CART_ITEMS[prereqId] or Constants.TOOLS.GRAVITY_COILS[prereqId]
+					local prereqName = prereqData and prereqData.displayName or prereqId
+					showErrorFrame("You must own '" .. prereqName .. "' first")
+					return
+				end
+			end
+			-- If we get here, prerequisites are met but something else is wrong (likely cash)
 			showErrorFrame("You cannot purchase this cart right now")
+		else
+			showErrorFrame("Invalid cart item")
 		end
 	end
 end
@@ -479,11 +515,25 @@ local function onGravityCoilButtonClicked(button)
 		-- Check why the button is disabled
 		local ownedItems = getOwnedItems()
 		local coilId = button.Name
+		local coilData = Constants.TOOLS.GRAVITY_COILS[coilId]
 
 		if ownedItems[coilId] then
 			showErrorFrame("You already own this gravity coil")
-		else
+		elseif coilData then
+			-- Check prerequisites
+			local prerequisites = coilData.prerequisites or {}
+			for _, prereqId in ipairs(prerequisites) do
+				if not ownedItems[prereqId] then
+					local prereqData = Constants.TOOLS.CART_ITEMS[prereqId] or Constants.TOOLS.GRAVITY_COILS[prereqId]
+					local prereqName = prereqData and prereqData.displayName or prereqId
+					showErrorFrame("You must own '" .. prereqName .. "' first")
+					return
+				end
+			end
+			-- If we get here, prerequisites are met but something else is wrong (likely cash)
 			showErrorFrame("You cannot purchase this gravity coil right now")
+		else
+			showErrorFrame("Invalid gravity coil item")
 		end
 	end
 end

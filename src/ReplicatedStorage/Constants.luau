@@ -1,6 +1,14 @@
 -- Game constants
 -- This file contains shared constants used across the game
 
+local SHOP_ITEMS = {
+	CART_60 = "Cart60",
+	CART_200 = "Cart200",
+	CART_600 = "Cart600",
+	GRAVITY_COIL = "GravityCoil",
+	SUPER_GRAVITY_COIL = "SuperGravityCoil",
+}
+
 return {
 	-- Player defaults
 	DEFAULT_WAGON_SIZE = 20,
@@ -37,6 +45,7 @@ return {
 			TOOLS_TAB = "ToolsTab",
 			PETS_TAB = "PetsTab",
 			START = "Start Button",
+			SHOP_ITEMS = SHOP_ITEMS,
 		},
 		ELEMENTS = {
 			IMAGE_LABEL = "ImageLabel",
@@ -72,46 +81,51 @@ return {
 		-- Cart items available for purchase
 		-- Each cart sets wagon capacity directly and costs cash
 		CART_ITEMS = {
-			["BuyCart60Button"] = {
+			[SHOP_ITEMS.CART_60] = {
 				-- price = 100000,
 				price = 5000,
 				wagonSize = 60,
 				displayName = "Small Cart",
 				description = "Holds up to 60 blocks",
 				image = "rbxassetid://128450464031364",
+				prerequisites = {}, -- No prerequisites for the first cart
 			},
-			["BuyCart200Button"] = {
+			[SHOP_ITEMS.CART_200] = {
 				price = 500000,
 				wagonSize = 200,
 				displayName = "Large Cart",
 				description = "Holds up to 200 blocks",
 				image = "rbxassetid://117181843097820",
+				prerequisites = { SHOP_ITEMS.CART_60 }, -- Requires small cart
 			},
-			["BuyCart600Button"] = {
+			[SHOP_ITEMS.CART_600] = {
 				price = 2000000,
 				wagonSize = 600,
 				displayName = "Huge Cart",
 				description = "Holds up to 600 blocks",
 				image = "rbxassetid://107001388860949",
+				prerequisites = { SHOP_ITEMS.CART_200 }, -- Requires large cart
 			},
 		},
 
 		-- Gravity coils available for purchase
 		-- Each gravity coil provides jump power enhancement and costs cash
 		GRAVITY_COILS = {
-			["BuyGravityCoilButton"] = {
+			[SHOP_ITEMS.GRAVITY_COIL] = {
 				price = 4000000,
 				jumpPower = 50,
 				displayName = "Gravity Coil",
 				description = "Jump to save bricks while running",
 				image = "rbxassetid://102629918562918",
+				prerequisites = {}, -- No prerequisites for the first coil
 			},
-			["BuySuperGravityCoilButton"] = {
+			[SHOP_ITEMS.SUPER_GRAVITY_COIL] = {
 				price = 10000000,
 				jumpPower = 90,
 				displayName = "Super Gravity Coil",
 				description = "4x jump power over normal gravity coils",
 				image = "rbxassetid://140234918622988",
+				prerequisites = { SHOP_ITEMS.GRAVITY_COIL }, -- Requires regular gravity coil
 			},
 		},
 	},
@@ -119,7 +133,8 @@ return {
 	-- Block selling transactions
 	-- Each transaction sets blocks required and cash reward
 	SELL_BLOCKS_TRANSACTIONS = {
-		["Sell10BlocksButton"] = { blocks = 10, cash = 10000 },
+		-- ["Sell10BlocksButton"] = { blocks = 10, cash = 10000 },
+		["Sell10BlocksButton"] = { blocks = 10, cash = 1000000 },
 		["Sell50BlocksButton"] = { blocks = 50, cash = 75000 },
 		["Sell100BlocksButton"] = { blocks = 100, cash = 200000 },
 		-- Add more transactions as needed - ensure button names in UI match these keys

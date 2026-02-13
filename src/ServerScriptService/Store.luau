@@ -82,6 +82,30 @@ local function onSellBlocks(player, buttonIdentifier)
 	end
 end
 
+-- Function to check if player meets prerequisites for an item
+local function checkPrerequisites(player, itemId)
+	-- Get item data (cart or gravity coil)
+	local itemData = Constants.TOOLS.CART_ITEMS[itemId] or Constants.TOOLS.GRAVITY_COILS[itemId]
+	if not itemData then
+		return false, "Invalid item"
+	end
+
+	-- Check if item has prerequisites
+	local prerequisites = itemData.prerequisites or {}
+	for _, prerequisiteId in ipairs(prerequisites) do
+		local hasItem = DataManager.hasItemInInventory(player, prerequisiteId)
+		if not hasItem then
+			-- Get prerequisite item name for error message
+			local prereqData = Constants.TOOLS.CART_ITEMS[prerequisiteId]
+				or Constants.TOOLS.GRAVITY_COILS[prerequisiteId]
+			local prereqName = prereqData and prereqData.displayName or prerequisiteId
+			return false, "You must own '" .. prereqName .. "' first"
+		end
+	end
+
+	return true -- All prerequisites met
+end
+
 -- Function to handle buying cart items
 local function onBuyCart(player, cartItemId)
 	print("onBuyCart", player, cartItemId)
@@ -92,6 +116,12 @@ local function onBuyCart(player, cartItemId)
 	-- Validate that this is a valid cart item or gravity coil
 	if not Constants.TOOLS.CART_ITEMS[cartItemId] and not Constants.TOOLS.GRAVITY_COILS[cartItemId] then
 		return false, "Invalid item"
+	end
+
+	-- Check prerequisites before allowing purchase
+	local prereqSuccess, prereqMessage = checkPrerequisites(player, cartItemId)
+	if not prereqSuccess then
+		return false, prereqMessage
 	end
 
 	-- Attempt to buy the cart item
